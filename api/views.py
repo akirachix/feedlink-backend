@@ -4,10 +4,6 @@ from rest_framework import status
 from reviews.models import Review          
 from .serializers import ReviewSerializer  
 
-class ReviewViewSet(
-    mixins.ListModelMixin,      
-    mixins.CreateModelMixin,    
-    viewsets.GenericViewSet
-):
+class ReviewViewSet(viewsets.ModelViewSet):
     queryset = Review.objects.all()
     serializer_class = ReviewSerializer
