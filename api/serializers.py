@@ -1,22 +1,47 @@
 from rest_framework import serializers
-from orders.models import Order, WasteClaim
+from orders.models import Order, OrderItem, WasteClaim
+
+
+
+class OrderItemSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = OrderItem
+        fields = ['id', 'order', 'quantity', 'price']
+
+    def validate_quantity(self, value):
+        if value <= 0:
+            raise serializers.ValidationError("Quantity must be a positive integer.")
+        return value
 
 class OrderSerializer(serializers.ModelSerializer):
+    items = OrderItemSerializer(many=True, required=False, read_only=True)
+
     class Meta:
         model = Order
-        fields = [
-            'order_id', 'order_date', 'order_status', 'payment_status',
-            'total_amount', 'pin', 'created_at', 'updated_at'
-        ]
-        read_only_fields = ['order_id', 'pin', 'order_date', 'created_at', 'updated_at']
+        fields = ['order_id', 'order_date', 'order_status', 'payment_status', 'total_amount', 'pin', 'items']
+        read_only_fields = ['order_id', 'order_date', 'total_amount', 'pin'] 
+
+    def create(self, validated_data):
+        items_data = validated_data.pop('items', [])
+        order = Order.objects.create(total_amount=0, **validated_data)
+        for item_data in items_data:
+            OrderItem.objects.create(order=order, **item_data)
+        order.update_total_amount()
+        return order
+
+    def update(self, instance, validated_data):
+    
+        allowed = ['order_status', 'payment_status']
+        for field in list(validated_data.keys()):
+            if field not in allowed:
+                validated_data.pop(field)
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+        return instance
 
 class WasteClaimSerializer(serializers.ModelSerializer):
     class Meta:
         model = WasteClaim
-        fields = [
-            'waste_id', 'claim_status', 'claim_time', 'pickup_window_end',
-            'pin', 'created_at', 'updated_at'
-        ]
-        read_only_fields = ['waste_id', 'pin', 'claim_time', 'created_at', 'updated_at']
-
-
+        fields = '__all__'
+        read_only_fields = ['waste_id', 'pin', 'created_at', 'updated_at']
