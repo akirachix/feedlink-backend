@@ -5,7 +5,7 @@ class ListingSerializer(serializers.ModelSerializer):
     class Meta:
         model = Listing
         fields = '__all__'
-        read_only_fields = ['listing_id', 'status', 'created_at', 'updated_at', 'producer']
+        read_only_fields = ['listing_id', 'status', 'created_at', 'updated_at', 'producer_id']
 
     def validate(self, data):
     
