@@ -11,10 +11,8 @@ idna==3.10
 mypy-extensions==1.0.0
 packaging==24.2
 pathspec==0.12.1
-
 platformdirs==4.3.6
 pyjwt==2.9.0
 requests==2.32.4
-
 sqlparse==0.5.3
 urllib3==2.2.3
