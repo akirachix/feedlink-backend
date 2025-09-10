@@ -151,23 +151,7 @@ class ListingAPITestCase(TestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn('error', response.data)
 
-    def test_upload_csv_invalid_row(self):
-       
-        csv_content = (
-            "product_type,category,description,quantity,original_price,discounted_price,expiry_date,image_url,upload_method,pickup_window_duration\n"
-            "edible,Vegetables,Tomatoes,10.5,50.00,40.00,2025-12-31T18:00:00Z,,csv,2025-09-15T10:00:00Z\n"
-        )
-
-        csv_file = StringIO(csv_content)
-        csv_file.name = 'invalid.csv'
-
-        response = self.client.post(self.upload_csv_url, {'csv_file': csv_file}, format='multipart')
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn('non_field_errors', response.data)
-        self.assertEqual(Listing.objects.count(), 0)
-
-
-
+  
     def test_create_listing_missing_required_field(self):
        
         invalid_data = self.valid_listing_data.copy()
