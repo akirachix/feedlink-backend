@@ -17,7 +17,7 @@ class Listing(models.Model):
     ]
 
     listing_id = models.AutoField(primary_key=True) 
-    # producer = models.ForeignKey(get_user_model(), on_delete=models.CASCADE)
+    # producer_id = models.ForeignKey(get_user_model(), on_delete=models.CASCADE)
     product_type = models.CharField(max_length=10, choices=PRODUCT_TYPE_CHOICES)
     category = models.CharField(max_length=50)
     description = models.CharField(max_length=200)
