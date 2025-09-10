@@ -10,7 +10,6 @@ class OrderViewSet(viewsets.ModelViewSet):
     queryset = Order.objects.all()
     serializer_class = OrderSerializer
     permission_classes = [AllowAny]
-    http_method_names = ['get', 'post', 'put', 'patch', 'head', 'options']
 
     # def get_queryset(self):
     #     user = self.request.user
@@ -42,7 +41,6 @@ class WasteClaimViewSet(viewsets.ModelViewSet):
     queryset = WasteClaim.objects.all()
     serializer_class = WasteClaimSerializer
     permission_classes = [AllowAny]
-    http_method_names = ['get', 'post', 'put', 'patch', 'head', 'options']
 
     def perform_create(self, serializer):
         serializer.save(claim_time=timezone.now())
