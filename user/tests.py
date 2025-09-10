@@ -7,7 +7,7 @@ class UserModelTest(TestCase):
             first_name='Semhal',
             last_name='Estifanos',
             email='semhal@gmail.com',
-            password='testpass123',
+            password='semu123',
             role='producer',
             till_number='1234'
         )
