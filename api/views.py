@@ -7,7 +7,7 @@ from rest_framework.response import Response
 from rest_framework.decorators import api_view
 from django.core.mail import send_mail
 from django.conf import settings
-from django.contrib.auth import authenticate, login
+from django.contrib.auth import authenticate
 from rest_framework.authtoken.models import Token
 
 import random
@@ -16,7 +16,6 @@ from user.models import User
 from .serializers import (
     UserSerializer,
     UserSignupSerializer,
-   
     ForgotPasswordSerializer,
     VerifyCodeSerializer,
     ResetPasswordSerializer,

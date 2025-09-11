@@ -1,6 +1,5 @@
 from rest_framework import serializers
 from user.models import User
-
 from django.contrib.auth import get_user_model, authenticate
 from location.models import UserLocation
 from location.utils import geocode_address
@@ -23,10 +22,6 @@ class UserLoginSerializer(serializers.Serializer):
 
         attrs['user'] = user
         return attrs
-
-
-
-
 
 class UserSerializer(serializers.ModelSerializer):
     latitude = serializers.SerializerMethodField()
@@ -136,12 +131,6 @@ class UserSignupSerializer(serializers.ModelSerializer):
            location = UserLocation.objects.filter(user=obj).first()
            return location.longitude if location else None
     
-
-
-
-
-
-
     def create(self, validated_data):
         role = validated_data.get("role")
         address = validated_data.get("address")
