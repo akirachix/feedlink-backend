@@ -7,6 +7,7 @@ on:
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
+    
     strategy:
       matrix:
         python-version: [3.8]
@@ -30,3 +31,4 @@ jobs:
     - name: Run tests with coverage
       run: |
         python manage.py test
+    
