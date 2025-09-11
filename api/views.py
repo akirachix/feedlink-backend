@@ -1,24 +1,27 @@
+
 from rest_framework.permissions import AllowAny
-from rest_framework.reverse import reverse
 from rest_framework import viewsets
 from rest_framework import generics, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework.decorators import api_view
+from inventory.models import Listing
+import csv
+from io import TextIOWrapper
+import random
 from django.core.mail import send_mail
 from django.conf import settings
 from django.contrib.auth import authenticate
 from rest_framework.authtoken.models import Token
-
-import random
 from location.models import UserLocation
 from user.models import User
+
 from .serializers import (
     UserSerializer,
     UserSignupSerializer,
     ForgotPasswordSerializer,
     VerifyCodeSerializer,
     ResetPasswordSerializer,
+    ListingSerializer
 )
 
 
@@ -110,15 +113,40 @@ class ResetPasswordView(APIView):
         user.save()
         otp_storage.pop(email, None) 
         return Response({"detail": "Password reset successful."})
+
+class ListingViewSet(viewsets.ModelViewSet):
+    queryset = Listing.objects.all()
+    serializer_class = ListingSerializer
     
+class ListingCSVUploadView(APIView):
+    
+    def post(self, request):
+        file = request.FILES.get('csv_file')
+        if not file:
+            return Response({"error": "No CSV file uploaded."}, status=status.HTTP_400_BAD_REQUEST)
 
+        reader = csv.DictReader(TextIOWrapper(file, encoding='utf-8'))
+        listings_created = []
+        errors = []
 
-@api_view(['GET'])
-def api_root(request, format=None):
-    return Response({
-     'users': reverse('user-list', request=request, format=format),
-     'signup': reverse('user-signup', request=request, format=format),
-     'login': reverse('user-login', request=request, format=format),
-    })
+        for row in reader:
+            serializer = ListingSerializer(data=row)
+            if serializer.is_valid():
+                instance = serializer.save(status='available', upload_method='csv')
+                listings_created.append(serializer.data)
+            else:
+                errors.append({
+                    "row": row,
+                    "errors": serializer.errors
+                })
 
-
+        if errors:
+            return Response({
+                "created": listings_created,
+                "errors": errors
+            }, status=status.HTTP_207_MULTI_STATUS)
+        else:
+            return Response({
+                "listings": listings_created
+            }, status=status.HTTP_201_CREATED)
+        
