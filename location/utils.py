@@ -4,7 +4,8 @@ from django.conf import settings
 def geocode_address(address: str):
     try:
         token = settings.LOCATION_TOKEN
-        url = f"https://us1.locationiq.com/v1/search.php?key={token}&q={address}&format=json"
+        base_url = settings.LOCATIONIQ_BASE_URL
+        url=f"{base_url}{token}&q={address}&format=json"
         response = requests.get(url, timeout=3)
         response.raise_for_status()
         data = response.json()

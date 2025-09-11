@@ -162,3 +162,6 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 env = environ.Env()
 environ.Env.read_env(BASE_DIR / ".env")
 LOCATION_TOKEN = env("LOCATION_TOKEN", default="dummy-token")
+LOCATIONIQ_BASE_URL = os.getenv('LOCATIONIQ_BASE_URL', '')
+
+
