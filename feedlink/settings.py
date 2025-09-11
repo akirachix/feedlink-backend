@@ -40,6 +40,8 @@ INSTALLED_APPS = [
     'orders',
     'rest_framework',
     'rest_framework.authtoken',
+    'inventory',
+    'api',
 ]
 
 REST_FRAMEWORK = {
