@@ -53,8 +53,6 @@ INSTALLED_APPS = [
     'api',
     'user',
     'location',
-    'rest_framework.authtoken',
-    'inventory',
  
 
 ]
