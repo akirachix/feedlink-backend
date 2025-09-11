@@ -4,6 +4,7 @@ from django.db import models
 import secrets
 from django.db import models
 from django.utils import timezone
+from inventory.models import Listing
 # from django.contrib.auth import get_user_model
 
 # User = get_user_model()
@@ -48,13 +49,15 @@ class Order(models.Model):
 
 class OrderItem(models.Model):
     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='items')
-    # listing = models.ForeignKey(Inventory, on_delete=models.CASCADE)
+    listing = models.ForeignKey(Listing, on_delete=models.CASCADE,  null= True)
     quantity = models.PositiveIntegerField()
     price = models.DecimalField(max_digits=10, decimal_places=2)  
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     def save(self, *args, **kwargs):
+        if self.listing and (self.price is None):
+            self.price = self.listing.discounted_price
         super().save(*args, **kwargs)
         self.order.update_total_amount()
 
@@ -65,15 +68,16 @@ class WasteClaim(models.Model):
     STATUS = [('pending', 'Pending'), ('collected', 'Collected')]
     waste_id = models.AutoField(primary_key=True)
     # user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='waste_claims')
-    # listing = models.ForeignKey(Inventory, on_delete=models.CASCADE)
+    listing = models.ForeignKey(Listing, on_delete=models.CASCADE,related_name='claims', null= True)
     claim_time =  models.DateTimeField(null=True, blank=True) 
     claim_status = models.CharField(max_length=10, choices=STATUS, default='pending')
-    pickup_window_end = models.DateTimeField()
     pin = models.CharField(max_length=10, unique=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     def save(self, *args, **kwargs):
+        if self.listing and self.listing.product_type != 'inedible':
+            raise ValueError("Listing product_type must be 'inedible'")
         if not self.pin:
             pin = generate_pin()
             while WasteClaim.objects.filter(pin=pin).exists():

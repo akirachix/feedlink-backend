@@ -1,10 +1,16 @@
-from rest_framework import viewsets
+from rest_framework import viewsets, status
 from rest_framework.permissions import AllowAny
 from rest_framework.permissions import IsAuthenticated
 from orders.models import Order, WasteClaim, OrderItem
-from .serializers import OrderSerializer, WasteClaimSerializer, OrderItemSerializer
+from .serializers import OrderSerializer, WasteClaimSerializer, OrderItemSerializer, ListingSerializer
 from orders.permissions import OrderPermission,WasteClaimPermission
 from django.utils import timezone
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from inventory.models import Listing
+
+import csv
+from io import TextIOWrapper
 
 class OrderViewSet(viewsets.ModelViewSet):
     queryset = Order.objects.all()
@@ -42,19 +48,17 @@ class WasteClaimViewSet(viewsets.ModelViewSet):
     serializer_class = WasteClaimSerializer
     permission_classes = [AllowAny]
 
+    def get_queryset(self):
+        return WasteClaim.objects.filter(listing__product_type='inedible') \
+                                 .select_related('listing') 
+                                 
+
     def perform_create(self, serializer):
         serializer.save(claim_time=timezone.now())
 
 
 
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework import status
-from rest_framework import viewsets
-from inventory.models import Listing
-from .serializers import ListingSerializer
-import csv
-from io import TextIOWrapper
+
 
 class ListingViewSet(viewsets.ModelViewSet):
     queryset = Listing.objects.all()

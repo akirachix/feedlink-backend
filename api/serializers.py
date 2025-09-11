@@ -7,7 +7,8 @@ from inventory.models import Listing
 class OrderItemSerializer(serializers.ModelSerializer):
     class Meta:
         model = OrderItem
-        fields = ['id', 'order', 'quantity', 'price']
+        fields = '__all__'
+        read_only_fields = ['price'] 
 
     def validate_quantity(self, value):
         if value <= 0:
@@ -19,7 +20,7 @@ class OrderSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Order
-        fields = ['order_id', 'order_date', 'order_status', 'payment_status', 'total_amount', 'pin', 'items']
+        fields = '__all__'
         read_only_fields = ['order_id', 'order_date', 'total_amount', 'pin'] 
 
     def create(self, validated_data):
@@ -42,10 +43,20 @@ class OrderSerializer(serializers.ModelSerializer):
         return instance
 
 class WasteClaimSerializer(serializers.ModelSerializer):
+    listing_id = serializers.IntegerField(source='listing.listing_id', read_only=True)
+
+    
+    listing_id = serializers.PrimaryKeyRelatedField(
+        queryset=Listing.objects.filter(product_type='inedible'),
+        source='listing'
+    )
+    
     class Meta:
         model = WasteClaim
-        fields = '__all__'
-        read_only_fields = ['waste_id', 'pin', 'created_at', 'updated_at']
+        fields =  ['waste_id', 'listing_id', 'claim_time', 'claim_status', 'pin', 'created_at', 'updated_at']
+        read_only_fields = ['waste_id','listing_id', 'pin', 'created_at', 'updated_at']
+
+    
 
 
 class ListingSerializer(serializers.ModelSerializer):

@@ -10,7 +10,7 @@ router.register(r'listings', ListingViewSet, basename='listings')
 
 urlpatterns = [
 
-    path('api/listings/upload-csv/', ListingCSVUploadView.as_view(), name='listing-csv-upload'),
-    path('api/', include(router.urls)),
+    path('1listings/upload-csv/', ListingCSVUploadView.as_view(), name='listing-csv-upload'),
+    path('', include(router.urls)),
 ]
 
