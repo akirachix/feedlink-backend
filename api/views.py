@@ -9,7 +9,6 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from inventory.models import Listing
 from rest_framework import generics, status
-
 import csv
 from io import TextIOWrapper
 import random
@@ -19,7 +18,6 @@ from django.contrib.auth import authenticate
 from rest_framework.authtoken.models import Token
 from location.models import UserLocation
 from user.models import User
-
 from .serializers import (
     UserSerializer,
     UserSignupSerializer,
@@ -28,6 +26,12 @@ from .serializers import (
     ResetPasswordSerializer,
     ListingSerializer
 )
+from django.shortcuts import render
+from .serializers import USSDPUSHSerializer, PaymentSerializer
+from .daraja import DarajaAPI
+from rest_framework.decorators import api_view, APIView
+from payment.models import Payment
+import datetime
 
 
 otp_storage = {}
@@ -135,10 +139,7 @@ class OrderItemViewSet(viewsets.ModelViewSet):
         if order_id:
             return self.queryset.filter(order_id=order_id)
         return self.queryset
-
-
-    
-    
+   
 class WasteClaimViewSet(viewsets.ModelViewSet):
     queryset = WasteClaim.objects.all()
     serializer_class = WasteClaimSerializer
@@ -151,9 +152,6 @@ class WasteClaimViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save(claim_time=timezone.now())
-
-
-
 
 
 class ListingViewSet(viewsets.ModelViewSet):
@@ -191,4 +189,75 @@ class ListingCSVUploadView(APIView):
             return Response({
                 "listings": listings_created
             }, status=status.HTTP_201_CREATED)
-        
+
+
+class PaymentViewSet(viewsets.ModelViewSet):
+    queryset = Payment.objects.all()
+    serializer_class = PaymentSerializer
+
+class USSDPUSHView(APIView):
+    def post(self, request):
+        serializer = USSDPUSHSerializer(data=request.data)
+        if serializer.is_valid():
+            data = serializer.validated_data
+            daraja = DarajaAPI()
+            ussd_response = daraja.ussd_push(
+                phone_number=data["phone_number"],
+                amount=float(data["amount"]),
+                account_reference=data["account_reference"],
+                transaction_desc=data["transaction_desc"],
+            )
+            merchant_request_id = ussd_response.get("MerchantRequestID")
+            checkout_request_id = ussd_response.get("CheckoutRequestID")
+            print("Saved checkout requestID:", checkout_request_id)
+            Payment.objects.create(
+                amount=float(data["amount"]),
+                merchant_request_id=merchant_request_id,
+                checkout_request_id=checkout_request_id,
+                status="PENDING"
+            )
+            return Response(
+                {
+                    "message": "USSD Push initiated, check your phone to complete the payment.",
+                    "response": ussd_response,
+                },
+                status=status.HTTP_200_OK,
+            )
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+@api_view(["POST"])
+def mpesa_ussd_callback(request):
+    print("Daraja Callback Data:", request.data)
+    body = request.data.get("Body", {})
+    stk_callback = body.get("stkCallback", {})
+    merchant_request_id = stk_callback.get("MerchantRequestID")
+    checkout_request_id = stk_callback.get("CheckoutRequestID")
+    result_code = int(stk_callback.get("ResultCode", 1))
+    result_desc = stk_callback.get("ResultDesc")
+    try:
+        payment = Payment.objects.get(checkout_request_id=checkout_request_id)
+    except Payment.DoesNotExist:
+        return Response({"error": "Payment not found"}, status=404)
+    payment.merchant_request_id = merchant_request_id
+    payment.result_code = result_code
+    payment.result_desc = result_desc
+    receipt_url = None
+    if result_code == 0:
+        metadata = stk_callback.get("CallbackMetadata", {}).get("Item", [])
+        parsed_metadata = {item["Name"]: item.get("Value") for item in metadata}
+        payment.mpesa_receipt_number = parsed_metadata.get("MpesaReceiptNumber")
+        payment.amount = parsed_metadata.get("Amount", payment.amount)
+        txn_date = parsed_metadata.get("TransactionDate")
+        if txn_date:
+            txn_date_str = str(txn_date)
+            payment.payment_date = datetime.strptime(txn_date_str, "%Y%m%d%H%M%S")
+        payment.status = "SUCCESS"
+        receipt_url = payment.generate_receipt()
+    else:
+        payment.status = "FAILED"
+    payment.save()
+    return Response({
+        "ResultCode": 0,
+        "ResultDesc": "Callback processed successfully",
+        "receipt_url": receipt_url,
+    })

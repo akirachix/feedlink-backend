@@ -1,6 +1,37 @@
 from rest_framework import serializers
+from payment.models import Payment
+from rest_framework import serializers
 from orders.models import Order, OrderItem, WasteClaim
 from inventory.models import Listing
+from user.models import User
+from django.contrib.auth import get_user_model, authenticate
+from location.models import UserLocation
+from location.utils import geocode_address
+
+
+class PaymentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Payment
+        fields = "__all__"
+        read_only_fields = (
+            'transaction_id',
+            'mpesa_receipt_number',
+            'checkout_request_id',
+            'merchant_request_id',
+            'result_code',
+            'result_desc',
+            'phone_number',
+            'created_at'
+
+        )
+
+class USSDPUSHSerializer(serializers.Serializer):
+    phone_number = serializers.CharField()
+    amount = serializers.DecimalField(max_digits=10, decimal_places=2)
+    account_reference = serializers.CharField()
+    transaction_desc = serializers.CharField()
+
+
 class ListingSerializer(serializers.ModelSerializer):
     class Meta:
         model = Listing
@@ -64,12 +95,6 @@ class WasteClaimSerializer(serializers.ModelSerializer):
         fields =  ['waste_id', 'listing_id', 'claim_time', 'claim_status', 'pin', 'created_at', 'updated_at']
         read_only_fields = ['waste_id','listing_id', 'pin', 'created_at', 'updated_at']
 
-    
-from user.models import User
-from django.contrib.auth import get_user_model, authenticate
-from location.models import UserLocation
-from location.utils import geocode_address
-from inventory.models import Listing
 
 
 class UserLoginSerializer(serializers.Serializer):
