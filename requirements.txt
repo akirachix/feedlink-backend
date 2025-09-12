@@ -1,17 +1,4 @@
 asgiref==3.8.1
-<<<<<<< HEAD
-certifi==2025.8.3
-charset-normalizer==3.4.3
-Django==4.2.24
-djangorestframework==3.15.2
-idna==3.6
-python-dotenv==0.21.0
-requests==2.32.3
-sqlparse==0.5.3
-urllib3==2.2.3
-psycopg2-binary>=2.9.7
-black==24.8.0
-=======
 black==24.8.0
 certifi==2025.8.3
 charset-normalizer==3.4.3
@@ -34,4 +21,3 @@ sqlparse==0.5.3
 tomli==2.2.1
 typing-extensions==4.13.2
 urllib3==2.2.3
->>>>>>> 27f594c97619937ede2206d41e9d6f64e2e6c72b
