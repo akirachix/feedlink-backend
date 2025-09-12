@@ -1,4 +1,3 @@
-
 from rest_framework import viewsets, status
 from rest_framework.permissions import AllowAny
 from rest_framework.permissions import IsAuthenticated
@@ -6,18 +5,21 @@ from orders.models import Order, WasteClaim, OrderItem
 from .serializers import OrderSerializer, WasteClaimSerializer, OrderItemSerializer, ListingSerializer
 from orders.permissions import OrderPermission,WasteClaimPermission
 from django.utils import timezone
-from rest_framework import viewsets
-from rest_framework.response import Response
-from rest_framework import status
-from reviews.models import Review          
-from .serializers import ReviewSerializer  
 from rest_framework.views import APIView
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
 from inventory.models import Listing
-from rest_framework import generics
+from rest_framework import generics, status
 import csv
+from payment.models import Payment
 from io import TextIOWrapper
-from user.models import User
+import random
+from django.core.mail import send_mail
+from django.conf import settings
+from django.contrib.auth import authenticate
+from rest_framework.authtoken.models import Token
 from location.models import UserLocation
+from user.models import User
 from .serializers import (
     UserSerializer,
     UserSignupSerializer,
@@ -26,6 +28,9 @@ from .serializers import (
     ResetPasswordSerializer,
     ListingSerializer
 )
+from reviews.models import Review          
+from .serializers import ReviewSerializer , PaymentSerializer        
+
 
 
 
@@ -186,3 +191,147 @@ class ResetPasswordView(APIView):
         user.save()
         otp_storage.pop(email, None) 
         return Response({"detail": "Password reset successful."})
+
+class OrderViewSet(viewsets.ModelViewSet):
+    queryset = Order.objects.all()
+    serializer_class = OrderSerializer
+    permission_classes = [AllowAny]
+
+
+class OrderItemViewSet(viewsets.ModelViewSet):
+    queryset = OrderItem.objects.all()
+    serializer_class = OrderItemSerializer
+    permission_classes = [AllowAny]  
+    
+    def get_queryset(self):
+        order_id = self.request.query_params.get('order_id')
+        if order_id:
+            return self.queryset.filter(order_id=order_id)
+        return self.queryset
+
+
+    
+    
+class WasteClaimViewSet(viewsets.ModelViewSet):
+    queryset = WasteClaim.objects.all()
+    serializer_class = WasteClaimSerializer
+    permission_classes = [AllowAny]
+
+    def get_queryset(self):
+        return WasteClaim.objects.filter(listing__product_type='inedible') \
+                                 .select_related('listing') 
+                                 
+
+    def perform_create(self, serializer):
+        serializer.save(claim_time=timezone.now())
+
+
+
+
+
+class ListingViewSet(viewsets.ModelViewSet):
+    queryset = Listing.objects.all()
+    serializer_class = ListingSerializer
+    
+class ListingCSVUploadView(APIView):
+    
+    def post(self, request):
+        file = request.FILES.get('csv_file')
+        if not file:
+            return Response({"error": "No CSV file uploaded."}, status=status.HTTP_400_BAD_REQUEST)
+
+        reader = csv.DictReader(TextIOWrapper(file, encoding='utf-8'))
+        listings_created = []
+        errors = []
+
+        for row in reader:
+            serializer = ListingSerializer(data=row)
+            if serializer.is_valid():
+                instance = serializer.save(status='available', upload_method='csv')
+                listings_created.append(serializer.data)
+            else:
+                errors.append({
+                    "row": row,
+                    "errors": serializer.errors
+                })
+
+        if errors:
+            return Response({
+                "created": listings_created,
+                "errors": errors
+            }, status=status.HTTP_207_MULTI_STATUS)
+        else:
+            return Response({
+                "listings": listings_created
+            }, status=status.HTTP_201_CREATED)
+        
+class PaymentViewSet(viewsets.ModelViewSet):
+    queryset = Payment.objects.all()
+    serializer_class = PaymentSerializer
+
+class USSDPUSHView(APIView):
+    def post(self, request):
+        serializer = USSDPUSHSerializer(data=request.data)
+        if serializer.is_valid():
+            data = serializer.validated_data
+            daraja = DarajaAPI()
+            ussd_response = daraja.ussd_push(
+                phone_number=data["phone_number"],
+                amount=float(data["amount"]),
+                account_reference=data["account_reference"],
+                transaction_desc=data["transaction_desc"],
+            )
+            merchant_request_id = ussd_response.get("MerchantRequestID")
+            checkout_request_id = ussd_response.get("CheckoutRequestID")
+            print("Saved checkout requestID:", checkout_request_id)
+            Payment.objects.create(
+                amount=float(data["amount"]),
+                merchant_request_id=merchant_request_id,
+                checkout_request_id=checkout_request_id,
+                status="PENDING"
+            )
+            return Response(
+                {
+                    "message": "USSD Push initiated, check your phone to complete the payment.",
+                    "response": ussd_response,
+                },
+                status=status.HTTP_200_OK,
+            )
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+@api_view(["POST"])
+def mpesa_ussd_callback(request):
+    print("Daraja Callback Data:", request.data)
+    body = request.data.get("Body", {})
+    stk_callback = body.get("stkCallback", {})
+    merchant_request_id = stk_callback.get("MerchantRequestID")
+    checkout_request_id = stk_callback.get("CheckoutRequestID")
+    result_code = int(stk_callback.get("ResultCode", 1))
+    result_desc = stk_callback.get("ResultDesc")
+    try:
+        payment = Payment.objects.get(checkout_request_id=checkout_request_id)
+    except Payment.DoesNotExist:
+        return Response({"error": "Payment not found"}, status=404)
+    payment.merchant_request_id = merchant_request_id
+    payment.result_code = result_code
+    payment.result_desc = result_desc
+    receipt_url = None
+    if result_code == 0:
+        metadata = stk_callback.get("CallbackMetadata", {}).get("Item", [])
+        parsed_metadata = {item["Name"]: item.get("Value") for item in metadata}
+        payment.mpesa_receipt_number = parsed_metadata.get("MpesaReceiptNumber")
+        payment.amount = parsed_metadata.get("Amount", payment.amount)
+        txn_date = parsed_metadata.get("TransactionDate")
+        if txn_date:
+            txn_date_str = str(txn_date)
+            payment.payment_date = datetime.strptime(txn_date_str, "%Y%m%d%H%M%S")
+        payment.status = "SUCCESS"
+        receipt_url = payment.generate_receipt()
+    else:
+        payment.status = "FAILED"
+    payment.save()
+    return Response({
+        "ResultCode": 0,
+        "ResultDesc": "Callback processed successfully",
+        "receipt_url": receipt_url,
+    })

@@ -3,7 +3,7 @@
 from django.urls import path,include
 from rest_framework.routers import DefaultRouter
 from .views import ReviewViewSet 
-from .views import OrderViewSet, WasteClaimViewSet, OrderItemViewSet,ListingViewSet, ListingCSVUploadView
+from .views import OrderViewSet, WasteClaimViewSet, OrderItemViewSet,ListingViewSet, ListingCSVUploadView, USSDPUSHView, PaymentViewSet, mpesa_ussd_callback
 
 
 from .views import (
@@ -23,6 +23,7 @@ router.register(r'item', OrderItemViewSet)
 router.register(r'wasteclaims', WasteClaimViewSet)
 router.register(r'users', UserViewSet, basename='user')
 router.register(r'listings', ListingViewSet, basename='listings')
+router.register(r"payments", PaymentViewSet, basename='payments')
 
 
 urlpatterns = [
@@ -33,6 +34,8 @@ urlpatterns = [
     path('verification/', VerifyCodeView.as_view(), name='verify-code'),
     path('reset/', ResetPasswordView.as_view(), name='reset-password'),
     path('listings/upload-csv/', ListingCSVUploadView.as_view(), name='listing-csv-upload'),
+    path("ussdpush", USSDPUSHView.as_view(), name="ussdpush"),
+    path("mpesa/callback", mpesa_ussd_callback, name="mpesa_callback"),
     path('', include(router.urls)),
 
 ]

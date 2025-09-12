@@ -1,28 +1,35 @@
 from rest_framework import serializers
-from reviews.models import Review
+from payment.models import Payment
+from orders.models import Order, OrderItem, WasteClaim
 from inventory.models import Listing
 from user.models import User
-from orders.models import Order, OrderItem, WasteClaim
 from django.contrib.auth import get_user_model, authenticate
 from location.models import UserLocation
 from location.utils import geocode_address
+from reviews.models import Review
+
 
 
 class ReviewSerializer(serializers.ModelSerializer):
-    review_id = serializers.IntegerField(source='id', read_only=True)
-    user_id = serializers.IntegerField(source='user.id', read_only=True)
-    order_id = serializers.IntegerField(source='order.order_id', read_only=True)
+    user_email = serializers.SerializerMethodField()
+    order_id = serializers.SerializerMethodField()
 
     class Meta:
         model = Review
-        fields = ['review_id', 'user_id', 'order_id', 'rating']
-        read_only_fields = ['review_id', 'user_id', 'order_id']
+        fields = ['review_id', 'user_email', 'order_id', 'ratings', 'created_at', 'updated_at']
+        read_only_fields = ['review_id', 'created_at', 'updated_at']
+
+    def get_user_email(self, obj):
+        return obj.user.email
+
+    def get_order_id(self, obj):
+        return obj.order.order_id
 
     def validate_ratings(self, value):
         if value < 1 or value > 5:
             raise serializers.ValidationError("Rating must be between 1 and 5.")
         return value
-
+        
 class ListingSerializer(serializers.ModelSerializer):
     class Meta:
         model = Listing
@@ -290,5 +297,27 @@ class ResetPasswordSerializer(serializers.Serializer):
         if attrs['password'] != attrs['confirm_password']:
             raise serializers.ValidationError("Password does not match.")
         return attrs
+
+class PaymentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Payment
+        fields = "__all__"
+        read_only_fields = (
+            'transaction_id',
+            'mpesa_receipt_number',
+            'checkout_request_id',
+            'merchant_request_id',
+            'result_code',
+            'result_desc',
+            'phone_number',
+            'created_at'
+
+        )
+
+class USSDPUSHSerializer(serializers.Serializer):
+    phone_number = serializers.CharField()
+    amount = serializers.DecimalField(max_digits=10, decimal_places=2)
+    account_reference = serializers.CharField()
+    transaction_desc = serializers.CharField()
 
 
