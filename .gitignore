@@ -5,13 +5,7 @@ env/
 .env
 env/
 __pycache__/
-*.pyc
-env/
-__pycache__/
-*.pyc
-<<<<<<< HEAD
-db.sqlite3
 
-.env
-=======
->>>>>>> 27f594c97619937ede2206d41e9d6f64e2e6c72b
+
+
+
