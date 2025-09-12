@@ -1,5 +1,7 @@
 from django.db import models
 from django.utils import timezone
+from orders.models import Order
+from user.models import User
 
 PAYMENT_STATUS = (
     ('pending', 'Pending'),
@@ -9,8 +11,8 @@ PAYMENT_STATUS = (
 
 class Payment(models.Model):
     transaction_id = models.AutoField(primary_key=True)
-    # order_id = models.ForeignKey('Order',on_delete=models.CASCADE, verbose_name="Order", null=True, blank=True)
-    # user_id = models.ForeignKey('User', on_delete=models.CASCADE, verbose_name="User", null=True, blank=True)
+    order_id = models.ForeignKey(Order,on_delete=models.CASCADE, verbose_name="Order", null=True, blank=True)
+    user_id = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name="User", null=True, blank=True)
     amount = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Amount (KES)")
     payment_status = models.CharField(max_length=20, choices=PAYMENT_STATUS, default='pending', verbose_name="Payment Status")
     created_at = models.DateTimeField(default=timezone.now, verbose_name="Created At")

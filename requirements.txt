@@ -1,4 +1,5 @@
 asgiref==3.8.1
+<<<<<<< HEAD
 certifi==2025.8.3
 charset-normalizer==3.4.3
 Django==4.2.24
@@ -10,3 +11,27 @@ sqlparse==0.5.3
 urllib3==2.2.3
 psycopg2-binary>=2.9.7
 black==24.8.0
+=======
+black==24.8.0
+certifi==2025.8.3
+charset-normalizer==3.4.3
+click==8.1.8
+django==4.2.24
+django-environ==0.11.2
+djangorestframework==3.15.2
+djangorestframework-simplejwt==5.3.1
+dotenv==0.9.9
+idna==3.10
+mypy-extensions==1.0.0
+packaging==24.2
+pathspec==0.12.1
+pillow==10.4.0
+platformdirs==4.3.6
+pyjwt==2.9.0
+python-dotenv==1.0.1
+requests==2.32.4
+sqlparse==0.5.3
+tomli==2.2.1
+typing-extensions==4.13.2
+urllib3==2.2.3
+>>>>>>> 27f594c97619937ede2206d41e9d6f64e2e6c72b
