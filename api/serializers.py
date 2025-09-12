@@ -7,7 +7,18 @@ from user.models import User
 from django.contrib.auth import get_user_model, authenticate
 from location.models import UserLocation
 from location.utils import geocode_address
+from reviews.models import Review
 
+class ReviewSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Review
+        fields = ['user', 'order', 'ratings']
+        read_only_fields = ['review_id']
+
+    def validate_ratings(self, value):
+        if value < 1 or value > 5:
+            raise serializers.ValidationError("Rating must be between 1 and 5.")
+        return value
 
 class PaymentSerializer(serializers.ModelSerializer):
     class Meta:
@@ -140,7 +151,10 @@ class UserSerializer(serializers.ModelSerializer):
         address = validated_data.get('address')
         till_number = validated_data.get('till_number')
         role = validated_data.get('role')
-
+        if role == 'producer' and not till_number:
+            raise serializers.ValidationError(
+            {"till_number": "Producers must provide a till number."}
+         )
         if role != 'producer':
             if address:
                 raise serializers.ValidationError(
@@ -167,6 +181,16 @@ class UserSerializer(serializers.ModelSerializer):
         address = validated_data.get('address', instance.address)
         till_number = validated_data.get('till_number', instance.till_number)
         role = validated_data.get('role', instance.role)
+        if role == 'producer' and not till_number:
+            raise serializers.ValidationError(
+            {"till_number": "Producers must provide a till number."}
+        )
+        if role != 'producer':
+            if 'address' in validated_data and validated_data['address']:
+                raise serializers.ValidationError(
+                {"address": "Only producers can update an address."}
+            )
+
 
         if role != 'producer':
             if 'address' in validated_data and validated_data['address']:
@@ -227,6 +251,11 @@ class UserSignupSerializer(serializers.ModelSerializer):
         role = validated_data.get("role")
         address = validated_data.get("address")
         till_number = validated_data.get("till_number")
+
+        if role == 'producer' and not till_number:
+            raise serializers.ValidationError(
+            {"till_number": "Producers must provide a till number."}
+        )
     
         if role != "producer":
             if address:

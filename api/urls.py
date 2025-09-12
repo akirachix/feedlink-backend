@@ -2,7 +2,7 @@
 
 from django.urls import path,include
 from rest_framework.routers import DefaultRouter
-from .views import OrderViewSet, WasteClaimViewSet, OrderItemViewSet,ListingViewSet, ListingCSVUploadView, USSDPUSHView, PaymentViewSet, mpesa_ussd_callback
+from .views import OrderViewSet, WasteClaimViewSet, OrderItemViewSet,ListingViewSet, ListingCSVUploadView, USSDPUSHView, PaymentViewSet, mpesa_ussd_callback, ReviewViewSet
 
 from .views import (
     UserViewSet,
@@ -21,6 +21,7 @@ router.register(r'wasteclaims', WasteClaimViewSet)
 router.register(r'users', UserViewSet, basename='user')
 router.register(r'listings', ListingViewSet, basename='listings')
 router.register(r"payments", PaymentViewSet, basename='payments')
+router.register(r"reviews", ReviewViewSet, basename="review")
 
 
 urlpatterns = [
