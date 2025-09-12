@@ -2,7 +2,7 @@
 
 from django.urls import path,include
 from rest_framework.routers import DefaultRouter
-from .views import ListingViewSet, ListingCSVUploadView
+from .views import OrderViewSet, WasteClaimViewSet, OrderItemViewSet,ListingViewSet, ListingCSVUploadView
 
 from .views import (
     UserViewSet,
@@ -15,8 +15,12 @@ from .views import (
 )
 
 router = DefaultRouter()
+router.register(r'orders', OrderViewSet)
+router.register(r'item', OrderItemViewSet)
+router.register(r'wasteclaims', WasteClaimViewSet)
 router.register(r'users', UserViewSet, basename='user')
 router.register(r'listings', ListingViewSet, basename='listings')
+
 
 urlpatterns = [
 
@@ -25,8 +29,8 @@ urlpatterns = [
     path('forgotpassword/', ForgotPasswordView.as_view(), name='forgot-password'),
     path('verification/', VerifyCodeView.as_view(), name='verify-code'),
     path('reset/', ResetPasswordView.as_view(), name='reset-password'),
-    path('api/listings/upload-csv/', ListingCSVUploadView.as_view(), name='listing-csv-upload'),
-    path('api/', include(router.urls)),
+    path('listings/upload-csv/', ListingCSVUploadView.as_view(), name='listing-csv-upload'),
+    path('', include(router.urls)),
 
 ]
 

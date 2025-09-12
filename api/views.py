@@ -1,10 +1,15 @@
-
+from rest_framework import viewsets, status
 from rest_framework.permissions import AllowAny
-from rest_framework import viewsets
-from rest_framework import generics, status
+from rest_framework.permissions import IsAuthenticated
+from orders.models import Order, WasteClaim, OrderItem
+from .serializers import OrderSerializer, WasteClaimSerializer, OrderItemSerializer, ListingSerializer
+from orders.permissions import OrderPermission,WasteClaimPermission
+from django.utils import timezone
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from inventory.models import Listing
+from rest_framework import generics, status
+
 import csv
 from io import TextIOWrapper
 import random
@@ -113,6 +118,43 @@ class ResetPasswordView(APIView):
         user.save()
         otp_storage.pop(email, None) 
         return Response({"detail": "Password reset successful."})
+
+class OrderViewSet(viewsets.ModelViewSet):
+    queryset = Order.objects.all()
+    serializer_class = OrderSerializer
+    permission_classes = [AllowAny]
+
+
+class OrderItemViewSet(viewsets.ModelViewSet):
+    queryset = OrderItem.objects.all()
+    serializer_class = OrderItemSerializer
+    permission_classes = [AllowAny]  
+    
+    def get_queryset(self):
+        order_id = self.request.query_params.get('order_id')
+        if order_id:
+            return self.queryset.filter(order_id=order_id)
+        return self.queryset
+
+
+    
+    
+class WasteClaimViewSet(viewsets.ModelViewSet):
+    queryset = WasteClaim.objects.all()
+    serializer_class = WasteClaimSerializer
+    permission_classes = [AllowAny]
+
+    def get_queryset(self):
+        return WasteClaim.objects.filter(listing__product_type='inedible') \
+                                 .select_related('listing') 
+                                 
+
+    def perform_create(self, serializer):
+        serializer.save(claim_time=timezone.now())
+
+
+
+
 
 class ListingViewSet(viewsets.ModelViewSet):
     queryset = Listing.objects.all()
