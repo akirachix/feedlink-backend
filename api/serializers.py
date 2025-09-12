@@ -151,7 +151,10 @@ class UserSerializer(serializers.ModelSerializer):
         address = validated_data.get('address')
         till_number = validated_data.get('till_number')
         role = validated_data.get('role')
-
+        if role == 'producer' and not till_number:
+            raise serializers.ValidationError(
+            {"till_number": "Producers must provide a till number."}
+         )
         if role != 'producer':
             if address:
                 raise serializers.ValidationError(
@@ -178,6 +181,10 @@ class UserSerializer(serializers.ModelSerializer):
         address = validated_data.get('address', instance.address)
         till_number = validated_data.get('till_number', instance.till_number)
         role = validated_data.get('role', instance.role)
+        if role == 'producer' and not till_number:
+            raise serializers.ValidationError(
+            {"till_number": "Producers must provide a till number."}
+        )
         if role != 'producer':
             if 'address' in validated_data and validated_data['address']:
                 raise serializers.ValidationError(
