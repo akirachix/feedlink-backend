@@ -124,17 +124,6 @@ class OrderViewSet(viewsets.ModelViewSet):
     serializer_class = OrderSerializer
     permission_classes = [AllowAny]
 
-    # def get_queryset(self):
-    #     user = self.request.user
-        
-    #     if user.is_staff or getattr(user, 'role', None) == 'producer':
-    #         return Order.objects.all()
-     
-    #     return Order.objects.filter(user=user)
-
-    # def perform_create(self, serializer):
-    #     serializer.save(user=self.request.user)
-
 
 class OrderItemViewSet(viewsets.ModelViewSet):
     queryset = OrderItem.objects.all()

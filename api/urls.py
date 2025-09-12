@@ -30,7 +30,7 @@ urlpatterns = [
     path('verification/', VerifyCodeView.as_view(), name='verify-code'),
     path('reset/', ResetPasswordView.as_view(), name='reset-password'),
     path('listings/upload-csv/', ListingCSVUploadView.as_view(), name='listing-csv-upload'),
-     path('', include(router.urls)),
+    path('', include(router.urls)),
 
 ]
 

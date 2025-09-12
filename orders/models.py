@@ -1,13 +1,11 @@
-from django.db import models
-
 # Create your models here.
 import secrets
 from django.db import models
 from django.utils import timezone
 from inventory.models import Listing
-# from django.contrib.auth import get_user_model
+from django.contrib.auth import get_user_model
 
-# User = get_user_model()
+User = get_user_model()
 
 def generate_pin(length=4):
     return ''.join(secrets.choice('0123456789') for _ in range(length))
@@ -17,7 +15,7 @@ class Order(models.Model):
     PAYMENT_STATUS = [('paid', 'Paid'), ('unpaid', 'Unpaid')]
 
     order_id = models.AutoField(primary_key=True)
-    # user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='orders')
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='orders', null= True)
     order_date = models.DateTimeField(default=timezone.now)
     order_status = models.CharField(max_length=10, choices=STATUS, default='pending')
     payment_status = models.CharField(max_length=10, choices=PAYMENT_STATUS, default='unpaid')
@@ -67,7 +65,7 @@ class OrderItem(models.Model):
 class WasteClaim(models.Model):
     STATUS = [('pending', 'Pending'), ('collected', 'Collected')]
     waste_id = models.AutoField(primary_key=True)
-    # user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='waste_claims')
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='claims', null= True)
     listing = models.ForeignKey(Listing, on_delete=models.CASCADE,related_name='claims', null= True)
     claim_time =  models.DateTimeField(null=True, blank=True) 
     claim_status = models.CharField(max_length=10, choices=STATUS, default='pending')
