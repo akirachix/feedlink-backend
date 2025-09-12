@@ -137,19 +137,35 @@ class UserSerializer(serializers.ModelSerializer):
          return location.longitude if location else None
 
     def create(self, validated_data):
+
         address = validated_data.get('address')
         till_number = validated_data.get('till_number')
         role = validated_data.get('role')
 
-        if role != 'producer':
-            if address:
-                raise serializers.ValidationError(
-                    {"address": "Only producers can provide an address."}
-                )
+        if till_number is not None:
+            till_number = str(till_number).strip()
+        else:
+            till_number = ""
+
+        if role == 'Producer':
+            if not till_number:
+                raise serializers.ValidationError({
+                    "till_number": "Till number is required for producers."
+                })
+        if len(till_number) < 3:
+            raise serializers.ValidationError({
+                "till_number": "Till number must be at least 3 characters long."
+            })
+
+        else:
             if till_number:
-                raise serializers.ValidationError(
-                    {"till_number": "Only producers can provide a till number."}
-                )
+                raise serializers.ValidationError({
+                    "till_number": "Only producers can provide a till number."
+            })
+            if address:
+                raise serializers.ValidationError({
+                "address": "Only producers can provide an address."
+            })
 
         user = User.objects.create(**validated_data)
 
