@@ -32,8 +32,14 @@ from .daraja import DarajaAPI
 from rest_framework.decorators import api_view, APIView
 from payment.models import Payment
 import datetime
+from reviews.models import Review
+from .serializers import ReviewSerializer
 
 
+class ReviewViewSet(viewsets.ModelViewSet):
+    queryset = Review.objects.all()
+    serializer_class = ReviewSerializer
+    
 otp_storage = {}
 
 class UserViewSet(viewsets.ModelViewSet):
