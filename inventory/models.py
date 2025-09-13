@@ -15,7 +15,11 @@ class Listing(models.Model):
         ('manual', 'Manual'),
         ('csv', 'CSV'),
     ]
-
+    UNIT_CHOICES = [
+    ('kg', 'kg'),
+    ('L', 'L'),
+    ('unit', 'unit'), 
+]
     listing_id = models.AutoField(primary_key=True) 
     producer = models.ForeignKey(get_user_model(), on_delete=models.CASCADE,limit_choices_to={'role':'producer'})  
     product_type = models.CharField(max_length=10, choices=PRODUCT_TYPE_CHOICES)
@@ -32,5 +36,12 @@ class Listing(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     upload_method = models.CharField(max_length=10, choices=UPLOAD_METHOD_CHOICES)
     pickup_window_duration = models.DateTimeField()
+    unit = models.CharField(
+        max_length=10,
+        choices=UNIT_CHOICES,
+        help_text="Select the unit: kg (weight), L (volume), or unit (count of items)"
+    )
+    def __str__(self):
+        return f"{self.quantity} {self.unit} of {self.product_type}"
 
    
