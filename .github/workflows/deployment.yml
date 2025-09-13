@@ -12,9 +12,14 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: 3.11
-      - name: Install dependencies
+        name: Install dependencies with trusted hosts and explicit index (FIXED!)
         run: |
-          pip install -r requirements.txt
+          pip install --no-cache-dir \
+            --index-url https://pypi.org/simple/ \
+            --trusted-host pypi.org \
+            --trusted-host files.pythonhosted.org \
+            -r requirements.txt
+
       - name: Install Heroku CLI
         run: curl https://cli-assets.heroku.com/install.sh | sh
       - name: Login to Heroku
