@@ -12,7 +12,7 @@ drf-spectacular-sidecar==2025.9.1
 idna==3.10
 inflection==0.5.1
 jsonschema==4.23.0
-jsonschema-specifications==2025.9.1
+jsonschema-specifications==2024.10.1    # ← FIXED: was 2025.9.1
 mypy-extensions==1.0.0
 packaging==24.2
 pathspec==0.12.1
