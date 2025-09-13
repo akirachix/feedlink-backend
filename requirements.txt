@@ -20,7 +20,7 @@ pillow==10.4.0
 platformdirs==4.3.6
 pyjwt==2.9.0
 pyyaml==6.0.2
-referencing==0.36.2
+referencing==0.35.1
 python-dotenv==1.0.0
 requests==2.32.4
 rpds-py==0.27.1
