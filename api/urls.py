@@ -3,6 +3,7 @@
 from django.urls import path,include
 from rest_framework.routers import DefaultRouter
 from .views import OrderViewSet, WasteClaimViewSet, OrderItemViewSet,ListingViewSet, ListingCSVUploadView, USSDPUSHView, PaymentViewSet, mpesa_ussd_callback
+from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, SpectacularSwaggerView
 
 from .views import (
     UserViewSet,
@@ -35,6 +36,9 @@ urlpatterns = [
     path("mpesa/callback", mpesa_ussd_callback, name="mpesa_callback"),
     path('', include(router.urls)),
 
+    path('schema/', SpectacularAPIView.as_view(), name='schema'),
+    path('schema/swagger-ui/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
+    path('schema/redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
 ]
 
 
