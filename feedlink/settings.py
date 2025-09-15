@@ -35,6 +35,7 @@ ALLOWED_HOSTS = ['*']
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
+    'django_filters',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
@@ -49,6 +50,7 @@ INSTALLED_APPS = [
     'user',
     'drf_spectacular',
     'reviews',
+    'rest_framework.authtoken',
     
 ]
 

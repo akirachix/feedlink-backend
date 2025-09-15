@@ -15,4 +15,4 @@ class Review(models.Model):
         unique_together = ('user', 'order')  
 
     def __str__(self):
-        return f"Review {self.review_id} by {self.buyer} for Order {self.order}"
+        return f"Review {self.pk} by {self.user} for Order {self.order}"

@@ -34,6 +34,7 @@ from payment.models import Payment
 import datetime
 from reviews.models import Review
 from .serializers import ReviewSerializer
+from django_filters.rest_framework import DjangoFilterBackend
 
 
 class ReviewViewSet(viewsets.ModelViewSet):
@@ -202,10 +203,17 @@ class PaymentViewSet(viewsets.ModelViewSet):
     serializer_class = PaymentSerializer
 
 class USSDPUSHView(APIView):
+    permission_classes = [IsAuthenticated]
+
     def post(self, request):
         serializer = USSDPUSHSerializer(data=request.data)
         if serializer.is_valid():
             data = serializer.validated_data
+            try:
+                order = Order.objects.get(order_id=data["account_reference"], user=request.user)
+            except Order.DoesNotExist:
+                return Response({"detail": "You do not own this order."}, status=status.HTTP_403_FORBIDDEN)
+
             daraja = DarajaAPI()
             ussd_response = daraja.ussd_push(
                 phone_number=data["phone_number"],
@@ -213,15 +221,20 @@ class USSDPUSHView(APIView):
                 account_reference=data["account_reference"],
                 transaction_desc=data["transaction_desc"],
             )
+            if "errorCode" in ussd_response:
+                return Response({"error": ussd_response.get("errorMessage", "Payment failed.")}, status=status.HTTP_400_BAD_REQUEST)
+
             merchant_request_id = ussd_response.get("MerchantRequestID")
             checkout_request_id = ussd_response.get("CheckoutRequestID")
-            print("Saved checkout requestID:", checkout_request_id)
             Payment.objects.create(
                 amount=float(data["amount"]),
                 merchant_request_id=merchant_request_id,
                 checkout_request_id=checkout_request_id,
-                status="PENDING"
+                status="PENDING",
+                order_id=order,
+                user_id=request.user,
             )
+
             return Response(
                 {
                     "message": "USSD Push initiated, check your phone to complete the payment.",
@@ -229,7 +242,8 @@ class USSDPUSHView(APIView):
                 },
                 status=status.HTTP_200_OK,
             )
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
 @api_view(["POST"])
 def mpesa_ussd_callback(request):
@@ -256,7 +270,7 @@ def mpesa_ussd_callback(request):
         txn_date = parsed_metadata.get("TransactionDate")
         if txn_date:
             txn_date_str = str(txn_date)
-            payment.payment_date = datetime.strptime(txn_date_str, "%Y%m%d%H%M%S")
+            payment.payment_date = datetime.datetime.strptime(txn_date_str, "%Y%m%d%H%M%S")
         payment.status = "SUCCESS"
         receipt_url = payment.generate_receipt()
     else:
