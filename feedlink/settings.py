@@ -66,6 +66,18 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'FeedLink API',
+    'DESCRIPTION': 'API documentation for the FeedLink project',
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': True,
+    'SWAGGER_UI_SETTINGS': {
+        'deepLinking': True,
+        'displayOperationId': True,
+        'defaultModelsExpandDepth': 1,
+        'defaultModelExpandDepth': 1,
+    },
+}
 CORS_ALLOW_ALL_ORIGINS = True
 
 ROOT_URLCONF = 'feedlink.urls'
