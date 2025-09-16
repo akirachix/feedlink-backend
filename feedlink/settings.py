@@ -48,7 +48,6 @@ INSTALLED_APPS = [
     'orders',
     'location',
     'user',
-    'drf_spectacular',
     'reviews',
     'rest_framework.authtoken',
     
@@ -88,30 +87,8 @@ TEMPLATES = [
     },
 ]
 
-REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES': [
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
-    ],
-    'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.AllowAny',
-    ],
-    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
-}
 
 WSGI_APPLICATION = 'feedlink.wsgi.application'
-
-SPECTACULAR_SETTINGS = {
-    'TITLE': 'FeedLink API',
-    'DESCRIPTION': 'API documentation for the FeedLink project',
-    'VERSION': '1.0.0',
-    'SERVE_INCLUDE_SCHEMA': True,
-    'SWAGGER_UI_SETTINGS': {
-        'deepLinking': True,
-        'displayOperationId': True,
-        'defaultModelsExpandDepth': 1,
-        'defaultModelExpandDepth': 1,
-    },
-}
 
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
