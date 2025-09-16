@@ -4,6 +4,7 @@ from rest_framework import serializers
 from orders.models import Order, OrderItem, WasteClaim
 from inventory.models import Listing
 from user.models import User
+
 from django.contrib.auth import get_user_model, authenticate
 from location.models import UserLocation
 from location.utils import geocode_address
@@ -128,6 +129,36 @@ class WasteClaimSerializer(serializers.ModelSerializer):
         model = WasteClaim
         fields =  ['waste_id', 'listing_id', 'claim_time', 'claim_status', 'pin', 'created_at', 'updated_at']
         read_only_fields = ['waste_id','listing_id', 'pin', 'created_at', 'updated_at']
+
+
+
+class UserLoginSerializer(serializers.Serializer):
+    email = serializers.EmailField(required=True)
+    password = serializers.CharField(write_only=True, required=True)
+
+    def validate(self, attrs):
+        email = attrs.get('email')
+        password = attrs.get('password')
+
+        if not email or not password:
+            raise serializers.ValidationError("Email and password are required.")
+        User = get_user_model()
+        user = authenticate(username=email, password=password)
+        if user is None:
+            raise serializers.ValidationError("Invalid email or password.")
+
+ 
+
+        attrs['user'] = user
+        return attrs
+
+
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status
+from rest_framework.permissions import AllowAny
+from rest_framework.authtoken.models import Token
+
 
 
 
@@ -337,10 +368,12 @@ class ForgotPasswordSerializer(serializers.Serializer):
 
 
 class VerifyCodeSerializer(serializers.Serializer):
+    email = serializers.EmailField()
     otp = serializers.CharField(max_length=4)
 
 
 class ResetPasswordSerializer(serializers.Serializer):
+    email = serializers.EmailField()
     password = serializers.CharField(write_only=True)
     confirm_password = serializers.CharField(write_only=True)
 
