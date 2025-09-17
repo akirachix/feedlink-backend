@@ -3,6 +3,7 @@ from payment.models import Payment
 from orders.models import Order, OrderItem, WasteClaim
 from inventory.models import Listing
 from user.models import User
+
 from django.contrib.auth import get_user_model, authenticate
 from location.models import UserLocation
 from location.utils import geocode_address
@@ -141,8 +142,10 @@ class WasteClaimSerializer(serializers.ModelSerializer):
     )
     class Meta:
         model = WasteClaim
-        fields =  ['waste_id', 'user', 'listing_id', 'claim_time', 'claim_status', 'pin', 'created_at', 'updated_at']
-        read_only_fields = ['waste_id', 'listing_id', 'pin', 'created_at', 'updated_at']
+        fields =  ['waste_id', 'listing_id', 'claim_time', 'claim_status', 'pin', 'created_at', 'updated_at']
+        read_only_fields = ['waste_id','listing_id', 'pin', 'created_at', 'updated_at']
+
+
 
 
 

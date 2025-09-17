@@ -40,4 +40,6 @@ class Listing(models.Model):
         help_text="Select the unit: kg (weight), L (volume), or unit (count of items)"
     )
     def __str__(self):
-        return f"{self.quantity} {self.unit} of {self.product_type}"
+        return f"{self.quantity} {self.unit} of {self.product_type}"   
+
+   

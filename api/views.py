@@ -1,3 +1,4 @@
+import random
 from rest_framework import viewsets, status
 from rest_framework.permissions import AllowAny
 from rest_framework.permissions import IsAuthenticated
@@ -11,7 +12,7 @@ from inventory.models import Listing
 from rest_framework import generics, status
 import csv
 from io import TextIOWrapper
-import random
+
 from django.core.mail import send_mail
 from django.conf import settings
 from django.contrib.auth import authenticate
@@ -21,6 +22,7 @@ from user.models import User
 
 
 from .serializers import (
+    UserLoginSerializer,
     UserLoginSerializer,
     UserSerializer,
     UserSignupSerializer,
@@ -36,8 +38,12 @@ from rest_framework.decorators import api_view, APIView
 from payment.models import Payment 
 from reviews.models import Review
 from .serializers import ReviewSerializer
-from datetime import datetime
 from django_filters.rest_framework import DjangoFilterBackend
+
+
+
+
+
 
 
 
@@ -69,7 +75,20 @@ class UserLoginAPIView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
-      
+        email = request.data.get("email")
+        password = request.data.get("password")
+        user = authenticate(request, username=email, password=password)
+        if not user:
+            return Response({"error": "Invalid email or password"}, status=status.HTTP_401_UNAUTHORIZED)
+        token, _ = Token.objects.get_or_create(user=user)
+        return Response({
+            "token": token.key,
+            "user_id": str(user.id),
+            "first_name": user.first_name,
+            "last_name": user.last_name,
+            "email": user.email,
+        })
+    def post(self, request):
         email = request.data.get("email")
         password = request.data.get("password")
         user = authenticate(request, username=email, password=password)
@@ -125,6 +144,7 @@ class VerifyCodeView(APIView):
             return Response({"detail": "Invalid OTP."}, status=status.HTTP_400_BAD_REQUEST)
 
         return Response({"detail": "OTP verified."})
+
 class ResetPasswordView(APIView):
     def post(self, request):
         serializer = ResetPasswordSerializer(data=request.data)
@@ -141,6 +161,9 @@ class ResetPasswordView(APIView):
         user.save()
         otp_storage.pop(email, None) 
         return Response({"detail": "Password reset successful."})
+
+
+
 
 class OrderViewSet(viewsets.ModelViewSet):
     queryset = Order.objects.all()
@@ -214,42 +237,36 @@ class PaymentViewSet(viewsets.ModelViewSet):
     queryset = Payment.objects.all()
     serializer_class = PaymentSerializer
 class USSDPUSHView(APIView):
+    permission_classes = [IsAuthenticated]
+
     def post(self, request):
         serializer = USSDPUSHSerializer(data=request.data)
         if serializer.is_valid():
             data = serializer.validated_data
-            daraja = DarajaAPI()
             try:
-                ussd_response = daraja.ussd_push(
-                    phone_number=data["phone_number"],
-                    amount=float(data["amount"]),
-                    account_reference=data["account_reference"],
-                    transaction_desc=data["transaction_desc"],
-                )
-            except Exception as e:
-                return Response(
-                    {"error": f"Daraja API failed: {str(e)}"},
-                    status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                )
+                order = Order.objects.get(order_id=data["account_reference"], user=request.user)
+            except Order.DoesNotExist:
+                return Response({"detail": "You do not own this order."}, status=status.HTTP_403_FORBIDDEN)
+
+            daraja = DarajaAPI()
+            ussd_response = daraja.ussd_push(
+                phone_number=data["phone_number"],
+                amount=float(data["amount"]),
+                account_reference=data["account_reference"],
+                transaction_desc=data["transaction_desc"],
+            )
+            if "errorCode" in ussd_response:
+                return Response({"error": ussd_response.get("errorMessage", "Payment failed.")}, status=status.HTTP_400_BAD_REQUEST)
+
             merchant_request_id = ussd_response.get("MerchantRequestID")
             checkout_request_id = ussd_response.get("CheckoutRequestID")
-            print("\n" + "="*70)
-            print("DARAJA RESPONSE RECEIVED")
-            print("="*70)
-            print(f"MerchantRequestID: {merchant_request_id}")
-            print(f"CheckoutRequestID: {checkout_request_id}")
-            print("="*70 + "\n")
-            if not checkout_request_id:
-                return Response(
-                    {"error": "Daraja did not return CheckoutRequestID"},
-                    status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                )
-            payment = Payment.objects.create(
+            Payment.objects.create(
                 amount=float(data["amount"]),
                 merchant_request_id=merchant_request_id,
                 checkout_request_id=checkout_request_id,
-                status="pending",
+                status="PENDING"
             )
+
             return Response(
                 {
                     "message": "USSD Push initiated, check your phone to complete the payment.",
@@ -258,7 +275,9 @@ class USSDPUSHView(APIView):
                 },
                 status=status.HTTP_200_OK,
             )
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
 @api_view(["POST"])
 def mpesa_ussd_callback(request):
     print("\n" + "="*80)
@@ -303,6 +322,10 @@ def mpesa_ussd_callback(request):
         payment.phone_number = parsed_metadata.get("PhoneNumber", "")
         txn_date = parsed_metadata.get("TransactionDate")
         if txn_date:
+            txn_date_str = str(txn_date)
+            payment.payment_date = datetime.datetime.strptime(txn_date_str, "%Y%m%d%H%M%S")
+            payment.status = "SUCCESS"
+            receipt_url = payment.generate_receipt()
             try:
                 txn_date_str = str(txn_date)
                 payment.payment_date = datetime.strptime(txn_date_str, "%Y%m%d%H%M%S")
