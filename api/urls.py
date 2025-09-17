@@ -35,7 +35,6 @@ urlpatterns = [
     path("ussdpush", USSDPUSHView.as_view(), name="ussdpush"),
     path("mpesa/callback", mpesa_ussd_callback, name="mpesa_callback"),
     path('', include(router.urls)),
-
 ]
 
 

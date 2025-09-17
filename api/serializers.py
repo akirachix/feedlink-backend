@@ -1,6 +1,5 @@
 from rest_framework import serializers
 from payment.models import Payment
-from rest_framework import serializers
 from orders.models import Order, OrderItem, WasteClaim
 from inventory.models import Listing
 from user.models import User
@@ -8,6 +7,11 @@ from django.contrib.auth import get_user_model, authenticate
 from location.models import UserLocation
 from location.utils import geocode_address
 from reviews.models import Review
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status
+from rest_framework.permissions import AllowAny
+from rest_framework.authtoken.models import Token
 
 class ReviewSerializer(serializers.ModelSerializer):
     class Meta:
@@ -35,12 +39,36 @@ class PaymentSerializer(serializers.ModelSerializer):
             'created_at'
 
         )
+    def validate_amount(self, value):
+        if value is None or value <= 0:
+            raise serializers.ValidationError("Amount must be greater than zero.")
+        return value
 
 class USSDPUSHSerializer(serializers.Serializer):
     phone_number = serializers.CharField()
     amount = serializers.DecimalField(max_digits=10, decimal_places=2)
     account_reference = serializers.CharField()
     transaction_desc = serializers.CharField()
+
+    def validate_phone_number(self, value):
+        if not value.isdigit():
+            raise serializers.ValidationError("Phone number must contain digits only.")
+        if len(value) < 9:
+            raise serializers.ValidationError("Phone number is too short.")
+        return value
+
+    def validate_amount(self, value):
+        if value <= 0:
+            raise serializers.ValidationError("Amount must be greater than zero.")
+        return value
+
+
+    def validate(self, attrs):
+        if not attrs.get('account_reference'):
+            raise serializers.ValidationError("Account reference is required.")
+        if not attrs.get('transaction_desc'):
+            raise serializers.ValidationError("Transaction description is required.")
+        return attrs
 
 
 class ListingSerializer(serializers.ModelSerializer):
@@ -67,6 +95,12 @@ class OrderItemSerializer(serializers.ModelSerializer):
 
 class OrderSerializer(serializers.ModelSerializer):
     items = OrderItemSerializer(many=True, required=False, read_only=True)
+
+    user = serializers.PrimaryKeyRelatedField(
+        queryset=User.objects.filter(role='buyer'),  
+        required=False, 
+        allow_null=True,
+    )
 
     class Meta:
         model = Order
@@ -100,17 +134,21 @@ class WasteClaimSerializer(serializers.ModelSerializer):
         queryset=Listing.objects.filter(product_type='inedible'),
         source='listing'
     )
-    
+    user = serializers.PrimaryKeyRelatedField(
+        queryset=User.objects.filter(role='recycler'),  
+        required=False, 
+        allow_null=True,
+    )
     class Meta:
         model = WasteClaim
-        fields =  ['waste_id', 'listing_id', 'claim_time', 'claim_status', 'pin', 'created_at', 'updated_at']
-        read_only_fields = ['waste_id','listing_id', 'pin', 'created_at', 'updated_at']
+        fields =  ['waste_id', 'user', 'listing_id', 'claim_time', 'claim_status', 'pin', 'created_at', 'updated_at']
+        read_only_fields = ['waste_id', 'listing_id', 'pin', 'created_at', 'updated_at']
 
 
 
 class UserLoginSerializer(serializers.Serializer):
-    email = serializers.EmailField()
-    password = serializers.CharField(write_only=True)
+    email = serializers.EmailField(required=True)
+    password = serializers.CharField(write_only=True,required=True)
 
     def validate(self, attrs):
         email = attrs.get('email')
@@ -125,6 +163,8 @@ class UserLoginSerializer(serializers.Serializer):
 
         attrs['user'] = user
         return attrs
+        
+
 
 class UserSerializer(serializers.ModelSerializer):
     latitude = serializers.SerializerMethodField()
@@ -148,6 +188,7 @@ class UserSerializer(serializers.ModelSerializer):
          return location.longitude if location else None
 
     def create(self, validated_data):
+
         address = validated_data.get('address')
         till_number = validated_data.get('till_number')
         role = validated_data.get('role')
@@ -161,9 +202,13 @@ class UserSerializer(serializers.ModelSerializer):
                     {"address": "Only producers can provide an address."}
                 )
             if till_number:
-                raise serializers.ValidationError(
-                    {"till_number": "Only producers can provide a till number."}
-                )
+                raise serializers.ValidationError({
+                    "till_number": "Only producers can provide a till number."
+            })
+            if address:
+                raise serializers.ValidationError({
+                "address": "Only producers can provide an address."
+            })
 
         user = User.objects.create(**validated_data)
 
@@ -223,6 +268,20 @@ class UserSerializer(serializers.ModelSerializer):
                     longitude=lon
                 )
         return instance
+
+def validate(self, data):
+    role = data.get('role', getattr(self.instance, 'role', None))
+    till_number = data.get('till_number', getattr(self.instance, 'till_number', None))
+    address = data.get('address', getattr(self.instance, 'address', None))
+    if role == 'producer' and not till_number:
+        raise serializers.ValidationError({"till_number": "Producers must provide a till number."})
+    if role != 'producer':
+        if address:
+            raise serializers.ValidationError({"address": "Only producers can provide an address."})
+        if till_number:
+            raise serializers.ValidationError({"till_number": "Only producers can provide a till number."})
+    return data
+
 
 class UserSignupSerializer(serializers.ModelSerializer):
     latitude = serializers.SerializerMethodField()
