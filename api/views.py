@@ -213,87 +213,117 @@ class ListingCSVUploadView(APIView):
 class PaymentViewSet(viewsets.ModelViewSet):
     queryset = Payment.objects.all()
     serializer_class = PaymentSerializer
-
 class USSDPUSHView(APIView):
-    permission_classes = [IsAuthenticated]
-
     def post(self, request):
         serializer = USSDPUSHSerializer(data=request.data)
         if serializer.is_valid():
             data = serializer.validated_data
-            try:
-                order = Order.objects.get(order_id=data["account_reference"], user=request.user)
-            except Order.DoesNotExist:
-                return Response({"detail": "You do not own this order."}, status=status.HTTP_403_FORBIDDEN)
-
             daraja = DarajaAPI()
-            ussd_response = daraja.ussd_push(
-                phone_number=data["phone_number"],
-                amount=float(data["amount"]),
-                account_reference=data["account_reference"],
-                transaction_desc=data["transaction_desc"],
-            )
-            if "errorCode" in ussd_response:
-                return Response({"error": ussd_response.get("errorMessage", "Payment failed.")}, status=status.HTTP_400_BAD_REQUEST)
-
+            try:
+                ussd_response = daraja.ussd_push(
+                    phone_number=data["phone_number"],
+                    amount=float(data["amount"]),
+                    account_reference=data["account_reference"],
+                    transaction_desc=data["transaction_desc"],
+                )
+            except Exception as e:
+                return Response(
+                    {"error": f"Daraja API failed: {str(e)}"},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                )
             merchant_request_id = ussd_response.get("MerchantRequestID")
             checkout_request_id = ussd_response.get("CheckoutRequestID")
-            print("Saved checkout requestID:", checkout_request_id)
-            Payment.objects.create(
+            print("\n" + "="*70)
+            print("DARAJA RESPONSE RECEIVED")
+            print("="*70)
+            print(f"MerchantRequestID: {merchant_request_id}")
+            print(f"CheckoutRequestID: {checkout_request_id}")
+            print("="*70 + "\n")
+            if not checkout_request_id:
+                return Response(
+                    {"error": "Daraja did not return CheckoutRequestID"},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                )
+            payment = Payment.objects.create(
                 amount=float(data["amount"]),
                 merchant_request_id=merchant_request_id,
                 checkout_request_id=checkout_request_id,
-                status="PENDING",
-                order_id=order,
-                user_id=request.user,
+                status="pending",
             )
-
             return Response(
                 {
                     "message": "USSD Push initiated, check your phone to complete the payment.",
                     "response": ussd_response,
+                    "payment_id": payment.transaction_id,
                 },
                 status=status.HTTP_200_OK,
             )
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        
-    
-                
 @api_view(["POST"])
 def mpesa_ussd_callback(request):
-    print("Daraja Callback Data:", request.data)
+    print("\n" + "="*80)
+    print("RECEIVED MPESA CALLBACK")
+    print("="*80)
+    print("Raw Request Data:", json.dumps(request.data, indent=2))
+    print("="*80 + "\n")
     body = request.data.get("Body", {})
     stk_callback = body.get("stkCallback", {})
     merchant_request_id = stk_callback.get("MerchantRequestID")
     checkout_request_id = stk_callback.get("CheckoutRequestID")
     result_code = int(stk_callback.get("ResultCode", 1))
     result_desc = stk_callback.get("ResultDesc")
-    try:
-        payment = Payment.objects.get(checkout_request_id=checkout_request_id)
-    except Payment.DoesNotExist:
+    print(f"Searching Payment with:")
+    print(f"  - CheckoutRequestID: '{checkout_request_id}'")
+    print(f"  - MerchantRequestID: '{merchant_request_id}'")
+    payment = None
+    if checkout_request_id:
+        try:
+            payment = Payment.objects.get(checkout_request_id=checkout_request_id)
+            print(f"Payment FOUND by CheckoutRequestID: ID={payment.transaction_id}")
+        except Payment.DoesNotExist:
+            print(f"Payment NOT FOUND by CheckoutRequestID: {checkout_request_id}")
+    if not payment and merchant_request_id:
+        try:
+            payment = Payment.objects.get(merchant_request_id=merchant_request_id)
+            print(f"Payment FOUND by MerchantRequestID: ID={payment.transaction_id}")
+        except Payment.DoesNotExist:
+            print(f"Payment NOT FOUND by MerchantRequestID: {merchant_request_id}")
+    if not payment:
+        print("NO PAYMENT FOUND WITH PROVIDED IDs")
         return Response({"error": "Payment not found"}, status=404)
     payment.merchant_request_id = merchant_request_id
-    payment.result_code = result_code
+    payment.result_code = str(result_code)
     payment.result_desc = result_desc
     receipt_url = None
-
     if result_code == 0:
         metadata = stk_callback.get("CallbackMetadata", {}).get("Item", [])
         parsed_metadata = {item["Name"]: item.get("Value") for item in metadata}
         payment.mpesa_receipt_number = parsed_metadata.get("MpesaReceiptNumber")
         payment.amount = parsed_metadata.get("Amount", payment.amount)
+        payment.phone_number = parsed_metadata.get("PhoneNumber", "")
         txn_date = parsed_metadata.get("TransactionDate")
-
         if txn_date:
-            txn_date_str = str(txn_date)
-            payment.payment_date = datetime.strptime(txn_date_str, "%Y%m%d%H%M%S")
-        payment.status = "SUCCESS"
-        receipt_url = payment.generate_receipt()
+            try:
+                txn_date_str = str(txn_date)
+                payment.payment_date = datetime.strptime(txn_date_str, "%Y%m%d%H%M%S")
+            except Exception as e:
+                print(f"Failed to parse TransactionDate: {e}")
+        payment.status = "confirmed"
     else:
-        payment.status = "FAILED"
+        payment.status = "failed"
     payment.save()
+    print(f"Payment {payment.transaction_id} UPDATED to status: {payment.status}")
     return Response({
         "ResultCode": 0,
         "ResultDesc": "Callback processed successfully",
         "receipt_url": receipt_url,
     })
+
+
+
+
+
+
+
+
+
