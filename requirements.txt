@@ -27,5 +27,5 @@ requests==2.32.4
 sqlparse==0.5.3
 tomli==2.2.1
 typing-extensions==4.13.2
-uritemplate==4.2.0
+uritemplate==4.1.1
 urllib3==2.2.3
