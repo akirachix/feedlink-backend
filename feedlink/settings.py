@@ -37,7 +37,6 @@ CORS_ALLOWED_ORIGINS = [
     "https://yourdomain.com",
 ]
 
-CORS_ALLOWED_ORIGINS = True
 
 CORS_ALLOW_CREDENTIALS = True
 
