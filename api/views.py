@@ -1,3 +1,4 @@
+import random
 from rest_framework import viewsets, status
 from rest_framework.permissions import AllowAny
 from rest_framework.permissions import IsAuthenticated
@@ -11,14 +12,18 @@ from inventory.models import Listing
 from rest_framework import generics, status
 import csv
 from io import TextIOWrapper
-import random
+
 from django.core.mail import send_mail
 from django.conf import settings
 from django.contrib.auth import authenticate
 from rest_framework.authtoken.models import Token
 from location.models import UserLocation
 from user.models import User
+
+
 from .serializers import (
+    UserLoginSerializer,
+    UserLoginSerializer,
     UserSerializer,
     UserSignupSerializer,
     ForgotPasswordSerializer,
@@ -30,22 +35,31 @@ from django.shortcuts import render
 from .serializers import USSDPUSHSerializer, PaymentSerializer
 from .daraja import DarajaAPI
 from rest_framework.decorators import api_view, APIView
-from payment.models import Payment
-import datetime
+from payment.models import Payment 
 from reviews.models import Review
 from .serializers import ReviewSerializer
+from django_filters.rest_framework import DjangoFilterBackend
+
+
+
+
+
+
 
 
 class ReviewViewSet(viewsets.ModelViewSet):
     queryset = Review.objects.all()
     serializer_class = ReviewSerializer
     
+    
 otp_storage = {}
 
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
     serializer_class = UserSerializer
-   
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = ['role']
+    http_method_names = ['get', 'post', 'put', 'patch', 'delete', 'head', 'options']
 
 class UserSignupAPIView(generics.CreateAPIView):
     queryset = User.objects.all()
@@ -56,11 +70,11 @@ class UserLocationViewSet(viewsets.ModelViewSet):
     queryset = UserLocation.objects.all()
     
 
+
 class UserLoginAPIView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
-      
         email = request.data.get("email")
         password = request.data.get("password")
         user = authenticate(request, username=email, password=password)
@@ -74,6 +88,24 @@ class UserLoginAPIView(APIView):
             "last_name": user.last_name,
             "email": user.email,
         })
+    def post(self, request):
+        email = request.data.get("email")
+        password = request.data.get("password")
+        user = authenticate(request, username=email, password=password)
+        if not user:
+            return Response({"error": "Invalid email or password"}, status=status.HTTP_401_UNAUTHORIZED)
+        token, _ = Token.objects.get_or_create(user=user)
+        return Response({
+            "token": token.key,
+            "user_id": str(user.id),
+            "first_name": user.first_name,
+            "last_name": user.last_name,
+            "email": user.email,
+        })
+
+
+
+
 
 
 
@@ -112,6 +144,7 @@ class VerifyCodeView(APIView):
             return Response({"detail": "Invalid OTP."}, status=status.HTTP_400_BAD_REQUEST)
 
         return Response({"detail": "OTP verified."})
+
 class ResetPasswordView(APIView):
     def post(self, request):
         serializer = ResetPasswordSerializer(data=request.data)
@@ -128,6 +161,9 @@ class ResetPasswordView(APIView):
         user.save()
         otp_storage.pop(email, None) 
         return Response({"detail": "Password reset successful."})
+
+
+
 
 class OrderViewSet(viewsets.ModelViewSet):
     queryset = Order.objects.all()
@@ -200,12 +236,18 @@ class ListingCSVUploadView(APIView):
 class PaymentViewSet(viewsets.ModelViewSet):
     queryset = Payment.objects.all()
     serializer_class = PaymentSerializer
-
 class USSDPUSHView(APIView):
+    permission_classes = [IsAuthenticated]
+
     def post(self, request):
         serializer = USSDPUSHSerializer(data=request.data)
         if serializer.is_valid():
             data = serializer.validated_data
+            try:
+                order = Order.objects.get(order_id=data["account_reference"], user=request.user)
+            except Order.DoesNotExist:
+                return Response({"detail": "You do not own this order."}, status=status.HTTP_403_FORBIDDEN)
+
             daraja = DarajaAPI()
             ussd_response = daraja.ussd_push(
                 phone_number=data["phone_number"],
@@ -213,39 +255,63 @@ class USSDPUSHView(APIView):
                 account_reference=data["account_reference"],
                 transaction_desc=data["transaction_desc"],
             )
+            if "errorCode" in ussd_response:
+                return Response({"error": ussd_response.get("errorMessage", "Payment failed.")}, status=status.HTTP_400_BAD_REQUEST)
+
             merchant_request_id = ussd_response.get("MerchantRequestID")
             checkout_request_id = ussd_response.get("CheckoutRequestID")
-            print("Saved checkout requestID:", checkout_request_id)
             Payment.objects.create(
                 amount=float(data["amount"]),
                 merchant_request_id=merchant_request_id,
                 checkout_request_id=checkout_request_id,
                 status="PENDING"
             )
+
             return Response(
                 {
                     "message": "USSD Push initiated, check your phone to complete the payment.",
                     "response": ussd_response,
+                    "payment_id": payment.transaction_id,
                 },
                 status=status.HTTP_200_OK,
             )
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
 @api_view(["POST"])
 def mpesa_ussd_callback(request):
-    print("Daraja Callback Data:", request.data)
+    print("\n" + "="*80)
+    print("RECEIVED MPESA CALLBACK")
+    print("="*80)
+    print("Raw Request Data:", json.dumps(request.data, indent=2))
+    print("="*80 + "\n")
     body = request.data.get("Body", {})
     stk_callback = body.get("stkCallback", {})
     merchant_request_id = stk_callback.get("MerchantRequestID")
     checkout_request_id = stk_callback.get("CheckoutRequestID")
     result_code = int(stk_callback.get("ResultCode", 1))
     result_desc = stk_callback.get("ResultDesc")
-    try:
-        payment = Payment.objects.get(checkout_request_id=checkout_request_id)
-    except Payment.DoesNotExist:
+    print(f"Searching Payment with:")
+    print(f"  - CheckoutRequestID: '{checkout_request_id}'")
+    print(f"  - MerchantRequestID: '{merchant_request_id}'")
+    payment = None
+    if checkout_request_id:
+        try:
+            payment = Payment.objects.get(checkout_request_id=checkout_request_id)
+            print(f"Payment FOUND by CheckoutRequestID: ID={payment.transaction_id}")
+        except Payment.DoesNotExist:
+            print(f"Payment NOT FOUND by CheckoutRequestID: {checkout_request_id}")
+    if not payment and merchant_request_id:
+        try:
+            payment = Payment.objects.get(merchant_request_id=merchant_request_id)
+            print(f"Payment FOUND by MerchantRequestID: ID={payment.transaction_id}")
+        except Payment.DoesNotExist:
+            print(f"Payment NOT FOUND by MerchantRequestID: {merchant_request_id}")
+    if not payment:
+        print("NO PAYMENT FOUND WITH PROVIDED IDs")
         return Response({"error": "Payment not found"}, status=404)
     payment.merchant_request_id = merchant_request_id
-    payment.result_code = result_code
+    payment.result_code = str(result_code)
     payment.result_desc = result_desc
     receipt_url = None
     if result_code == 0:
@@ -253,17 +319,34 @@ def mpesa_ussd_callback(request):
         parsed_metadata = {item["Name"]: item.get("Value") for item in metadata}
         payment.mpesa_receipt_number = parsed_metadata.get("MpesaReceiptNumber")
         payment.amount = parsed_metadata.get("Amount", payment.amount)
+        payment.phone_number = parsed_metadata.get("PhoneNumber", "")
         txn_date = parsed_metadata.get("TransactionDate")
         if txn_date:
             txn_date_str = str(txn_date)
-            payment.payment_date = datetime.strptime(txn_date_str, "%Y%m%d%H%M%S")
-        payment.status = "SUCCESS"
-        receipt_url = payment.generate_receipt()
+            payment.payment_date = datetime.datetime.strptime(txn_date_str, "%Y%m%d%H%M%S")
+            payment.status = "SUCCESS"
+            receipt_url = payment.generate_receipt()
+            try:
+                txn_date_str = str(txn_date)
+                payment.payment_date = datetime.strptime(txn_date_str, "%Y%m%d%H%M%S")
+            except Exception as e:
+                print(f"Failed to parse TransactionDate: {e}")
+        payment.status = "confirmed"
     else:
-        payment.status = "FAILED"
+        payment.status = "failed"
     payment.save()
+    print(f"Payment {payment.transaction_id} UPDATED to status: {payment.status}")
     return Response({
         "ResultCode": 0,
         "ResultDesc": "Callback processed successfully",
         "receipt_url": receipt_url,
     })
+
+
+
+
+
+
+
+
+
