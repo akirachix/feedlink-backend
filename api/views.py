@@ -104,20 +104,6 @@ class ForgotPasswordView(APIView):
             User.objects.get(email=email)
         except User.DoesNotExist:
             return Response({"detail": "User with this email does not exist."}, status=status.HTTP_400_BAD_REQUEST)
-   
-
-
-
-class ForgotPasswordView(APIView):
-    def post(self, request):
-        serializer = ForgotPasswordSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        email = serializer.validated_data['email']
-
-        try:
-            User.objects.get(email=email)
-        except User.DoesNotExist:
-            return Response({"detail": "User with this email does not exist."}, status=status.HTTP_400_BAD_REQUEST)
 
         otp = str(random.randint(1000, 9999))
         otp_storage[email] = otp  

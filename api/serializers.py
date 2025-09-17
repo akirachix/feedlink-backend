@@ -36,10 +36,7 @@ class PaymentSerializer(serializers.ModelSerializer):
             'created_at'
 
         )
-    def validate_amount(self, value):
-        if value is None or value <= 0:
-            raise serializers.ValidationError("Amount must be greater than zero.")
-        return value   
+    
 
 class USSDPUSHSerializer(serializers.Serializer):
     phone_number = serializers.CharField()
@@ -47,26 +44,7 @@ class USSDPUSHSerializer(serializers.Serializer):
     account_reference = serializers.CharField()
     transaction_desc = serializers.CharField()
 
-    def validate_phone_number(self, value):
-        if not value.isdigit():
-            raise serializers.ValidationError("Phone number must contain digits only.")
-        if len(value) < 9:
-            raise serializers.ValidationError("Phone number is too short.")
-        return value
-
-    def validate_amount(self, value):
-        if value <= 0:
-            raise serializers.ValidationError("Amount must be greater than zero.")
-        return value
-
-    def validate(self, attrs):
-        if not attrs.get('account_reference'):
-            raise serializers.ValidationError("Account reference is required.")
-        if not attrs.get('transaction_desc'):
-            raise serializers.ValidationError("Transaction description is required.")
-        return attrs
-
-
+    
 class ListingSerializer(serializers.ModelSerializer):
     class Meta:
         model = Listing
@@ -130,34 +108,6 @@ class WasteClaimSerializer(serializers.ModelSerializer):
         fields =  ['waste_id', 'listing_id', 'claim_time', 'claim_status', 'pin', 'created_at', 'updated_at']
         read_only_fields = ['waste_id','listing_id', 'pin', 'created_at', 'updated_at']
 
-
-
-class UserLoginSerializer(serializers.Serializer):
-    email = serializers.EmailField(required=True)
-    password = serializers.CharField(write_only=True, required=True)
-
-    def validate(self, attrs):
-        email = attrs.get('email')
-        password = attrs.get('password')
-
-        if not email or not password:
-            raise serializers.ValidationError("Email and password are required.")
-        User = get_user_model()
-        user = authenticate(username=email, password=password)
-        if user is None:
-            raise serializers.ValidationError("Invalid email or password.")
-
- 
-
-        attrs['user'] = user
-        return attrs
-
-
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework import status
-from rest_framework.permissions import AllowAny
-from rest_framework.authtoken.models import Token
 
 
 
