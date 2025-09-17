@@ -26,7 +26,25 @@ python-dotenv==1.0.1
 pyyaml==6.0.2
 referencing==0.36.2
 requests==2.32.4
-rpds-py==0.27.1
+rpds-py==0.27.1SMTPServerDisconnected at /api/forgotpassword/
+please run connect() first
+Request Method:	POST
+Request URL:	http://127.0.0.1:8000/api/forgotpassword/
+Django Version:	5.2.6
+Exception Type:	SMTPServerDisconnected
+Exception Value:	
+please run connect() first
+Exception Location:	/home/student/snap/code/205/.local/share/uv/python/cpython-3.13.7-linux-x86_64-gnu/lib/python3.13/smtplib.py, line 365, in send
+Raised during:	api.views.ForgotPasswordView
+Python Executable:	/home/student/feedlink-backend/env/bin/python
+Python Version:	3.13.7
+Python Path:	
+['/home/student/feedlink-backend',
+ '/home/student/snap/code/205/.local/share/uv/python/cpython-3.13.7-linux-x86_64-gnu/lib/python313.zip',
+ '/home/student/snap/code/205/.local/share/uv/python/cpython-3.13.7-linux-x86_64-gnu/lib/python3.13',
+ '/home/student/snap/code/205/.local/share/uv/python/cpython-3.13.7-linux-x86_64-gnu/lib/python3.13/lib-dynload',
+ '/home/student/feedlink-backend/env/lib/python3.13/site-packages']
+Server time:	Wed, 17 Sep 2025 12:34:12 +0000
 sqlparse==0.5.3
 tomli==2.2.1
 typing-extensions==4.13.2

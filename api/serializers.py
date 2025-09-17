@@ -96,6 +96,12 @@ class OrderItemSerializer(serializers.ModelSerializer):
 class OrderSerializer(serializers.ModelSerializer):
     items = OrderItemSerializer(many=True, required=False, read_only=True)
 
+    user = serializers.PrimaryKeyRelatedField(
+        queryset=User.objects.filter(role='buyer'),  
+        required=False, 
+        allow_null=True,
+    )
+
     class Meta:
         model = Order
         fields = '__all__'

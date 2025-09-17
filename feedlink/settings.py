@@ -170,7 +170,8 @@ DARAJA_BASE_URL = os.getenv('DARAJA_BASE_URL')
 DARAJA_MERCHANT_REQUEST_ID = os.getenv('DARAJA_MERCHANT_REQUEST_ID')
 
 
-EMAIL_BACKEND = os.getenv('EMAIL_BACKEND')
+EMAIL_BACKEND = os.getenv('EMAIL_BACKEND', 'django.core.mail.backends.smtp.EmailBackend')
+
 EMAIL_HOST = os.getenv('EMAIL_HOST')
 EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS') == 'True'
 EMAIL_PORT = int(os.getenv('EMAIL_PORT', '587'))
@@ -189,3 +190,4 @@ environ.Env.read_env(BASE_DIR / ".env")
 LOCATION_TOKEN = env("LOCATION_TOKEN", default="dummy-token")
 LOCATIONIQ_BASE_URL = os.getenv('LOCATIONIQ_BASE_URL', '')
 
+DEFAULT_FILE_STORAGE = "django.core.files.storage.FileSystemStorage"
