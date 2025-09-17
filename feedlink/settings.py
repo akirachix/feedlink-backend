@@ -91,18 +91,6 @@ REST_FRAMEWORK = {
 
 WSGI_APPLICATION = 'feedlink.wsgi.application'
 
-SPECTACULAR_SETTINGS = {
-    'TITLE': 'FeedLink API',
-    'DESCRIPTION': 'API documentation for the FeedLink project',
-    'VERSION': '1.0.0',
-    'SERVE_INCLUDE_SCHEMA': True,
-    'SWAGGER_UI_SETTINGS': {
-        'deepLinking': True,
-        'displayOperationId': True,
-        'defaultModelsExpandDepth': 1,
-        'defaultModelExpandDepth': 1,
-    },
-}
 
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
@@ -169,25 +157,5 @@ DARAJA_BUSINESS_SHORTCODE = os.getenv('DARAJA_BUSINESS_SHORTCODE')
 DARAJA_PASSKEY = os.getenv('DARAJA_PASSKEY')
 DARAJA_CALLBACK_URL = os.getenv('DARAJA_CALLBACK_URL')
 DARAJA_BASE_URL = os.getenv('DARAJA_BASE_URL')
-DARAJA_MERCHANT_REQUEST_ID = os.getenv('DARAJA_MERCHANT_REQUEST_ID')
 
 
-EMAIL_BACKEND = os.getenv('EMAIL_BACKEND')
-EMAIL_HOST = os.getenv('EMAIL_HOST')
-EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS') == 'True'
-EMAIL_PORT = int(os.getenv('EMAIL_PORT', '587'))
-EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER')
-EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
-DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL')
-
-AUTHENTICATION_BACKENDS = [
-    'django.contrib.auth.backends.ModelBackend',
-]
-
-from pathlib import Path
-import environ
-BASE_DIR = Path(__file__).resolve().parent.parent
-env = environ.Env()
-environ.Env.read_env(BASE_DIR / ".env")
-LOCATION_TOKEN = env("LOCATION_TOKEN", default="dummy-token")
-LOCATIONIQ_BASE_URL = os.getenv('LOCATIONIQ_BASE_URL', '')
