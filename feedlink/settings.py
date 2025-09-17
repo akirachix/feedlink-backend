@@ -30,17 +30,15 @@ DEBUG = True
 ALLOWED_HOSTS = []
 
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",   # Next.js default
-    "http://localhost:3002",   # Your current port
-    "http://127.0.0.1:3002",  # Same as above, different host
-    "http://127.0.0.1:8000",  # Django backend
+    "http://localhost:3000",   
+    "http://localhost:3002",   
+    "http://127.0.0.1:3002", 
+    "http://127.0.0.1:8000", 
     "https://yourdomain.com",
 ]
 
-# CORS_ALLOWED_ORIGINS = True
+CORS_ALLOWED_ORIGINS = True
 
-
-# If you also want to allow credentials (cookies, auth headers)
 CORS_ALLOW_CREDENTIALS = True
 
 
