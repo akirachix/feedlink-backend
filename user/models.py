@@ -38,7 +38,7 @@ class User(AbstractUser):
     role = models.CharField(max_length=10, choices=ROLE)
     latitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
     longitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
-    till_number = models.CharField(max_length=4, blank=True, null=True)
+    till_number = models.CharField(max_length=6, blank=True, null=True)
     address = models.CharField(max_length=100, blank=True, null=True)
     USERNAME_FIELD = 'email' 
     REQUIRED_FIELDS = []  
