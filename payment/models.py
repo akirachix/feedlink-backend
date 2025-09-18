@@ -21,7 +21,6 @@ class Payment(models.Model):
     result_desc = models.TextField(blank=True, null=True)
     payment_date = models.DateTimeField(blank=True, null=True, verbose_name="Payment Date")
     status = models.CharField(max_length=20, default='pending', choices=PAYMENT_STATUS)
-    status = models.CharField(max_length=20, default='pending', choices=PAYMENT_STATUS)
     def __str__(self):
         return f"Payment {self.transaction_id} - {self.amount} KES"
     def is_successful(self):

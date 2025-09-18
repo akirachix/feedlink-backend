@@ -278,11 +278,11 @@ class USSDPUSHView(APIView):
         
 @api_view(["POST"])
 def mpesa_ussd_callback(request):
-    print("\n\n" + "="*80)
-    print("👉 RAW DATA FROM MPESA:")
+    print("\n" + "="*80)
+    print("RECEIVED MPESA CALLBACK")
     print("="*80)
-    print(request.body.decode('utf-8'))
-    print("="*80 + "\n\n")
+    print("Raw Request Data:", json.dumps(request.data, indent=2))
+    print("="*80 + "\n")
     body = request.data.get("Body", {})
     stk_callback = body.get("stkCallback", {})
     merchant_request_id = stk_callback.get("MerchantRequestID")
@@ -308,12 +308,10 @@ def mpesa_ussd_callback(request):
     if not payment:
         print("NO PAYMENT FOUND WITH PROVIDED IDs")
         return Response({"error": "Payment not found"}, status=404)
-
     payment.merchant_request_id = merchant_request_id
     payment.result_code = str(result_code)
     payment.result_desc = result_desc
     receipt_url = None
-
     if result_code == 0:
         metadata = stk_callback.get("CallbackMetadata", {}).get("Item", [])
         parsed_metadata = {item["Name"]: item.get("Value") for item in metadata}
@@ -321,7 +319,6 @@ def mpesa_ussd_callback(request):
         payment.amount = parsed_metadata.get("Amount", payment.amount)
         payment.phone_number = parsed_metadata.get("PhoneNumber", "")
         txn_date = parsed_metadata.get("TransactionDate")
-
         if txn_date:
             try:
                 txn_date_str = str(txn_date)
@@ -331,12 +328,19 @@ def mpesa_ussd_callback(request):
         payment.status = "confirmed"
     else:
         payment.status = "failed"
-    
     payment.save()
     print(f"Payment {payment.transaction_id} UPDATED to status: {payment.status}")
-
     return Response({
         "ResultCode": 0,
         "ResultDesc": "Callback processed successfully",
         "receipt_url": receipt_url,
     })
+
+
+
+
+
+
+
+
+
