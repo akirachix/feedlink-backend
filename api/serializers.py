@@ -142,6 +142,8 @@ class WasteClaimSerializer(serializers.ModelSerializer):
 class UserLoginSerializer(serializers.Serializer):
    email = serializers.EmailField(required=True)
    password = serializers.CharField(write_only=True,required=True)
+   permission_classes = [AllowAny]
+
 
 
    def validate(self, attrs):
@@ -167,6 +169,10 @@ class UserLoginSerializer(serializers.Serializer):
 class UserSerializer(serializers.ModelSerializer):
    latitude = serializers.SerializerMethodField()
    longitude = serializers.SerializerMethodField()
+#    authentication_classes = []  # disables authentication
+#    permission_classes = [AllowAny]  # allows any user
+
+
 
 
    class Meta:

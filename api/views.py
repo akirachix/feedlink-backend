@@ -18,6 +18,7 @@ from django.contrib.auth import authenticate
 from rest_framework.authtoken.models import Token
 from location.models import UserLocation
 from user.models import User
+
 from .serializers import (
    UserLoginSerializer,
    UserSerializer,
@@ -45,6 +46,7 @@ class ReviewViewSet(viewsets.ModelViewSet):
 otp_storage = {}
 
 class UserViewSet(viewsets.ModelViewSet):
+
    queryset = User.objects.all()
    serializer_class = UserSerializer
    filter_backends = [DjangoFilterBackend]
@@ -60,6 +62,8 @@ class UserSignupAPIView(generics.CreateAPIView):
 
 class UserLocationViewSet(viewsets.ModelViewSet):
    queryset = UserLocation.objects.all()
+   permission_classes = [AllowAny]
+
   
 class UserLoginAPIView(APIView):
    permission_classes = [AllowAny]
