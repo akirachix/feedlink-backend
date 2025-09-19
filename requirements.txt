@@ -33,4 +33,6 @@ uritemplate==4.1.1
 urllib3==2.2.3
 django-environ==0.11.2
 django-cors-headers
+psycopg==3.2.10
 psycopg2-binary==2.9.10
+dj-database-url==1.0.0
