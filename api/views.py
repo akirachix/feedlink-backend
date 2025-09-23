@@ -37,6 +37,7 @@ from reviews.models import Review
 from .serializers import ReviewSerializer
 from django_filters.rest_framework import DjangoFilterBackend
 import json
+from django.core.cache import cache
 
 class ReviewViewSet(viewsets.ModelViewSet):
    queryset = Review.objects.all()
@@ -103,7 +104,7 @@ class ForgotPasswordView(APIView):
        serializer = ForgotPasswordSerializer(data=request.data)
        serializer.is_valid(raise_exception=True)
        email = serializer.validated_data['email']
-
+       
 
        try:
            User.objects.get(email=email)
@@ -112,6 +113,7 @@ class ForgotPasswordView(APIView):
 
 
        otp = str(random.randint(1000, 9999))
+       cache.set(f'otp_{email}',otp,timeout=300)
        otp_storage[email] = otp 
 
 
@@ -132,10 +134,13 @@ class VerifyCodeView(APIView):
        serializer.is_valid(raise_exception=True)
        email = serializer.validated_data['email']
        otp = serializer.validated_data['otp']
+       cached_otp=cache.get(f'otp_{email}')
+       if cached_otp is None:
+           return Response({"detail": "Otp has expired"},status=status.HTTP_400_BAD_REQUEST)
+       cache.delete(f"otp_{email}")
 
-
-       if otp_storage.get(email) != otp:
-           return Response({"detail": "Invalid OTP."}, status=status.HTTP_400_BAD_REQUEST)
+    #    if otp_storage.get(email) != otp:
+    #        return Response({"detail": "Invalid OTP."}, status=status.HTTP_400_BAD_REQUEST)
 
 
        return Response({"detail": "OTP verified."})
@@ -147,7 +152,7 @@ class ResetPasswordView(APIView):
        serializer.is_valid(raise_exception=True)
        email = serializer.validated_data['email']
        password = serializer.validated_data['password']
-
+       
 
        try:
            user = User.objects.get(email=email)
@@ -157,7 +162,8 @@ class ResetPasswordView(APIView):
 
        user.set_password(password)
        user.save()
-       otp_storage.pop(email, None)
+       cache.delete(f"otp_{email}")
+    #    otp_storage.pop(email, None)
        return Response({"detail": "Password reset successful."})
 
 class OrderViewSet(viewsets.ModelViewSet):
