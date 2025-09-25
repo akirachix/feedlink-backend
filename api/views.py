@@ -37,6 +37,7 @@ from reviews.models import Review
 from .serializers import ReviewSerializer
 from django_filters.rest_framework import DjangoFilterBackend
 import json
+from django.core.cache import cache
 
 class ReviewViewSet(viewsets.ModelViewSet):
    queryset = Review.objects.all()
@@ -112,6 +113,7 @@ class ForgotPasswordView(APIView):
 
 
        otp = str(random.randint(1000, 9999))
+       cache.set(f'otp_{email}',otp,timeout=300)
        otp_storage[email] = otp 
 
 
@@ -132,12 +134,10 @@ class VerifyCodeView(APIView):
        serializer.is_valid(raise_exception=True)
        email = serializer.validated_data['email']
        otp = serializer.validated_data['otp']
-
-
-       if otp_storage.get(email) != otp:
-           return Response({"detail": "Invalid OTP."}, status=status.HTTP_400_BAD_REQUEST)
-
-
+       cached_otp=cache.get(f'otp_{email}')
+       if cached_otp is None:
+           return Response({"detail": "Otp has expired"},status=status.HTTP_400_BAD_REQUEST)
+       cache.delete(f"otp_{email}")
        return Response({"detail": "OTP verified."})
 
 
@@ -147,17 +147,18 @@ class ResetPasswordView(APIView):
        serializer.is_valid(raise_exception=True)
        email = serializer.validated_data['email']
        password = serializer.validated_data['password']
-
-
        try:
            user = User.objects.get(email=email)
+
+
        except User.DoesNotExist:
            return Response({"detail": "User with this email does not exist."}, status=status.HTTP_400_BAD_REQUEST)
 
 
        user.set_password(password)
        user.save()
-       otp_storage.pop(email, None)
+       cache.delete(f"otp_{email}")
+  
        return Response({"detail": "Password reset successful."})
 
 class OrderViewSet(viewsets.ModelViewSet):
