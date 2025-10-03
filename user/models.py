@@ -28,7 +28,7 @@ class User(AbstractUser):
     first_name = models.CharField(max_length=20, blank=False, null=False)
     last_name = models.CharField(max_length=20, blank=False, null=False)
     email = models.EmailField(unique=True)
-    profile_picture = models.URLField(blank=True, null=True)
+    profile_picture = models.ImageField(upload_to='profiles',blank=True, null=True)
     ROLE = [
         ('recycler', 'Recycler'),
         ('buyer', 'Buyer'),
