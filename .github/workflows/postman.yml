@@ -22,6 +22,11 @@ jobs:
           curl -o- "https://dl-cli.pstmn.io/install/linux64.sh" | sh
       - name: Login to Postman CLI
         run: postman login --with-api-key "$POSTMAN_API_KEY"
+
+
+      - name: Sync collections from Postman Cloud
+        run: postman pull
+        
       - name: Run API tests
         run: |
           mkdir -p reports
