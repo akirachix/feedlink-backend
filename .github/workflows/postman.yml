@@ -27,12 +27,7 @@ jobs:
       - name: Sync collections from Postman Cloud
         run: postman pull
         
-      - name: Run API tests
-        run: |
-          mkdir -p reports
-          postman collection run "$COL_UID" \
-            --reporters cli,junit \
-            --reporter-junit-export reports/junit.xml
+     
       - name: Run API tests
         run: |
           mkdir -p reports
