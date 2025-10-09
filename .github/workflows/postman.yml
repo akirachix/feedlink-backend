@@ -14,7 +14,7 @@ jobs:
   automated-api-tests:
     runs-on: ubuntu-latest
     env:
-      COL_UID: ${{ secrets.COL_UID }}
+      
       POSTMAN_API_KEY: ${{ secrets.POSTMAN_API_KEY }}
     steps:
       - uses: actions/checkout@v4
@@ -27,7 +27,7 @@ jobs:
         run: |
           mkdir -p reports
           postman pull \
-          postman collection run "Feedlink-Feedlink" \
+          postman collection run "Feedlink" \
             --reporters cli,junit \
             --reporter-junit-export reports/junit.xml
       - name: Upload JUnit report
