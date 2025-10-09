@@ -26,7 +26,8 @@ jobs:
       - name: Run API tests
         run: |
           mkdir -p reports
-          postman collection run "$COL_UID" \
+          postman pull \
+          postman collection run "Feedlink-Feedlink" \
             --reporters cli,junit \
             --reporter-junit-export reports/junit.xml
       - name: Upload JUnit report
