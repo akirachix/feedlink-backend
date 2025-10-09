@@ -33,6 +33,12 @@ jobs:
           postman collection run "$COL_UID" \
             --reporters cli,junit \
             --reporter-junit-export reports/junit.xml
+      - name: Run API tests
+        run: |
+          mkdir -p reports
+          postman collection run "Feedlink" \
+            --reporters cli,junit \
+            --reporter-junit-export reports/junit.xml
       - name: Upload JUnit report
         uses: actions/upload-artifact@v4
         with:
@@ -40,7 +46,7 @@ jobs:
           path: reports/junit.xml
 
 
-
+       
 
 
 
