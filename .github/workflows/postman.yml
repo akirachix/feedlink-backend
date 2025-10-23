@@ -30,7 +30,7 @@ jobs:
       - name: Run API tests
         run: |
           mkdir -p reports
-          postman collection run "Feedlink" \
+          postman collection run "45722982-8ff3307d-6cc8-4a93-8194-c8843b990b99" \
             --reporters cli,junit \
             --reporter-junit-export reports/junit.xml
 
