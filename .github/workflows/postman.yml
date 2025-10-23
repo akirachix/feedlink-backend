@@ -1,63 +1,41 @@
-name: Automated API tests using Postman
-
+name: Automated API tests using Postman CLI
 on:
   push:
-    branches: [main, develop, feature/postman]
+    branches:
+      - main
+      - develop
+      - feature/postman
   pull_request:
-    branches: [main, develop]
+    branches:
+      - main
+      - develop
   workflow_dispatch:
-
 jobs:
   automated-api-tests:
     runs-on: ubuntu-latest
     env:
       POSTMAN_API_KEY: ${{ secrets.POSTMAN_API_KEY }}
-      POSTMAN_COLLECTION_UID: "45722982-8ff3307d-6cc8-4a93-8194-c8843b990b99"  # ✅ Your real UID
     steps:
       - uses: actions/checkout@v4
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Install Newman (official Postman runner)
-        run: npm install -g newman
-
-      - name: Download Postman Collection via API
+      - name: Install Postman CLI
         run: |
-          mkdir -p collections
-          echo "⬇️ Fetching collection UID: $POSTMAN_COLLECTION_UID"
-          curl -sS \
-            -H "X-API-Key: $POSTMAN_API_KEY" \
-            "https://api.getpostman.com/collections/$POSTMAN_COLLECTION_UID" \
-            -o collections/feedlink.json
-
-          # Check if response contains an error
-          if grep -q '"error"' collections/feedlink.json; then
-            echo "❌ Failed to fetch collection. Response:"
-            cat collections/feedlink.json
-            exit 1
-          fi
-
-          # Ensure file exists and has content
-          if [ ! -s collections/feedlink.json ]; then
-            echo "❌ Downloaded collection is empty."
-            exit 1
-          fi
-
-          echo "✅ Collection downloaded successfully."
-          echo "📄 Size: $(wc -c < collections/feedlink.json) bytes"
-
+          curl -o- "https://dl-cli.pstmn.io/install/linux64.sh" | sh
+      - name: Login to Postman CLI
+        run: postman login --with-api-key "$POSTMAN_API_KEY"
       - name: Run API tests
         run: |
           mkdir -p reports
-          newman run collections/feedlink.json \
+          postman pull \
+          postman collection run "Feedlink" \
             --reporters cli,junit \
             --reporter-junit-export reports/junit.xml
-
       - name: Upload JUnit report
         uses: actions/upload-artifact@v4
         with:
           name: postman-junit
           path: reports/junit.xml
+
+
+
+
+
