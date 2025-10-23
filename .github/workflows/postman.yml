@@ -12,8 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       POSTMAN_API_KEY: ${{ secrets.POSTMAN_API_KEY }}
-      # 👇 REPLACE THIS WITH YOUR ACTUAL COLLECTION UID
-      POSTMAN_COLLECTION_UID: "YOUR_COLLECTION_UID_HERE"
+      POSTMAN_COLLECTION_UID: "45722982-8ff3307d-6cc8-4a93-8194-c8843b990b99"  # ✅ Your real UID
     steps:
       - uses: actions/checkout@v4
 
