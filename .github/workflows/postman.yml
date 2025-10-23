@@ -22,15 +22,31 @@ jobs:
 
       - name: Install Postman CLI
         run: |
+          # Fixed: removed trailing space in URL
           curl -o- "https://dl-cli.pstmn.io/install/linux64.sh" | sh
 
       - name: Login to Postman CLI
         run: postman login --with-api-key "$POSTMAN_API_KEY"
 
-      - name: Pull Postman Collection
+      - name: Pull and Verify Postman Collection
         run: |
           mkdir -p collections
+          echo "⬇️ Attempting to pull collection: Feedlink"
           postman pull "Feedlink" --output collections/feedlink.json
+
+          # Verify the file exists and is not empty
+          if [ ! -f collections/feedlink.json ] || [ ! -s collections/feedlink.json ]; then
+            echo "❌ ERROR: Failed to pull collection 'Feedlink'."
+            echo "📋 Available collections in your workspaces:"
+            postman list collections
+            echo ""
+            echo "💡 Make sure the name matches EXACTLY (case, spaces, symbols)."
+            echo "✅ Recommendation: Use the collection UID instead of name."
+            exit 1
+          fi
+
+          echo "✅ Collection successfully pulled: collections/feedlink.json"
+          echo "📄 Size: $(wc -c < collections/feedlink.json) bytes"
 
       - name: Run API tests
         run: |
