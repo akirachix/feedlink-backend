@@ -1,4 +1,4 @@
-name: Automated API tests using Postman CLI
+name: Automated API tests using Postman (via Newman)
 
 on:
   push:
@@ -15,43 +15,43 @@ on:
 jobs:
   automated-api-tests:
     runs-on: ubuntu-latest
-    env:
-      POSTMAN_API_KEY: ${{ secrets.POSTMAN_API_KEY }}
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Postman CLI
-        run: |
-          # Fixed: removed trailing space in URL
-          curl -o- "https://dl-cli.pstmn.io/install/linux64.sh" | sh
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
 
-      - name: Login to Postman CLI
-        run: postman login --with-api-key "$POSTMAN_API_KEY"
+      - name: Install Newman
+        run: npm install -g newman
 
-      - name: Pull and Verify Postman Collection
+      - name: Download Postman Collection (via API or direct link)
+        env:
+          POSTMAN_API_KEY: ${{ secrets.POSTMAN_API_KEY }}
         run: |
           mkdir -p collections
-          echo "⬇️ Attempting to pull collection: Feedlink"
-          postman pull "Feedlink" --output collections/feedlink.json
+          # Replace COLLECTION_UID with your actual Postman Collection UID
+          # Find it in Postman: Collection > ... > Share > Copy UID
+          COLLECTION_UID="YOUR_COLLECTION_UID_HERE"
+          
+          curl -s "https://api.getpostman.com/collections/$COLLECTION_UID" \
+            -H "X-API-Key: $POSTMAN_API_KEY" \
+            -o collections/feedlink.json
 
-          # Verify the file exists and is not empty
-          if [ ! -f collections/feedlink.json ] || [ ! -s collections/feedlink.json ]; then
-            echo "❌ ERROR: Failed to pull collection 'Feedlink'."
-            echo "📋 Available collections in your workspaces:"
-            postman list collections
-            echo ""
-            echo "💡 Make sure the name matches EXACTLY (case, spaces, symbols)."
-            echo "✅ Recommendation: Use the collection UID instead of name."
+          if [ ! -f collections/feedlink.json ] || grep -q "error" collections/feedlink.json; then
+            echo "❌ Failed to fetch collection. Check UID and API key."
+            cat collections/feedlink.json || echo "No response received."
             exit 1
           fi
 
-          echo "✅ Collection successfully pulled: collections/feedlink.json"
+          echo "✅ Collection successfully downloaded: collections/feedlink.json"
           echo "📄 Size: $(wc -c < collections/feedlink.json) bytes"
 
-      - name: Run API tests
+      - name: Run API tests with Newman
         run: |
           mkdir -p reports
-          postman collection run collections/feedlink.json \
+          newman run collections/feedlink.json \
             --reporters cli,junit \
             --reporter-junit-export reports/junit.xml
 
