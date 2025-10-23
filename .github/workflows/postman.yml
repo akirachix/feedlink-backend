@@ -1,20 +1,19 @@
-name: Automated API tests using Postman (via Newman)
+name: Automated API tests using Postman
 
 on:
   push:
-    branches:
-      - main
-      - develop
-      - feature/postman
+    branches: [main, develop, feature/postman]
   pull_request:
-    branches:
-      - main
-      - develop
+    branches: [main, develop]
   workflow_dispatch:
 
 jobs:
   automated-api-tests:
     runs-on: ubuntu-latest
+    env:
+      POSTMAN_API_KEY: ${{ secrets.POSTMAN_API_KEY }}
+      # 👇 REPLACE THIS WITH YOUR ACTUAL COLLECTION UID
+      POSTMAN_COLLECTION_UID: "YOUR_COLLECTION_UID_HERE"
     steps:
       - uses: actions/checkout@v4
 
@@ -23,32 +22,35 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Install Newman
+      - name: Install Newman (official Postman runner)
         run: npm install -g newman
 
-      - name: Download Postman Collection (via API or direct link)
-        env:
-          POSTMAN_API_KEY: ${{ secrets.POSTMAN_API_KEY }}
+      - name: Download Postman Collection via API
         run: |
           mkdir -p collections
-          # Replace COLLECTION_UID with your actual Postman Collection UID
-          # Find it in Postman: Collection > ... > Share > Copy UID
-          COLLECTION_UID="YOUR_COLLECTION_UID_HERE"
-          
-          curl -s "https://api.getpostman.com/collections/$COLLECTION_UID" \
+          echo "⬇️ Fetching collection UID: $POSTMAN_COLLECTION_UID"
+          curl -sS \
             -H "X-API-Key: $POSTMAN_API_KEY" \
+            "https://api.getpostman.com/collections/$POSTMAN_COLLECTION_UID" \
             -o collections/feedlink.json
 
-          if [ ! -f collections/feedlink.json ] || grep -q "error" collections/feedlink.json; then
-            echo "❌ Failed to fetch collection. Check UID and API key."
-            cat collections/feedlink.json || echo "No response received."
+          # Check if response contains an error
+          if grep -q '"error"' collections/feedlink.json; then
+            echo "❌ Failed to fetch collection. Response:"
+            cat collections/feedlink.json
             exit 1
           fi
 
-          echo "✅ Collection successfully downloaded: collections/feedlink.json"
+          # Ensure file exists and has content
+          if [ ! -s collections/feedlink.json ]; then
+            echo "❌ Downloaded collection is empty."
+            exit 1
+          fi
+
+          echo "✅ Collection downloaded successfully."
           echo "📄 Size: $(wc -c < collections/feedlink.json) bytes"
 
-      - name: Run API tests with Newman
+      - name: Run API tests
         run: |
           mkdir -p reports
           newman run collections/feedlink.json \
