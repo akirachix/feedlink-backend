@@ -21,7 +21,7 @@ jobs:
 
       - name: Install Postman CLI
         run: |
-          curl -o- "https://dl-cli.pstmn.io/install/linux64.sh" | sh
+          curl -o- "https://dl-cli.pstmn.io/install/linux64.sh"| sh
 
   
       - name: Authenticate with Postman
