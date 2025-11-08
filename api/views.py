@@ -11,7 +11,61 @@ from rest_framework.response import Response
 from inventory.models import Listing
 from rest_framework import generics, status
 import csv
+# from io import TextIOWr
+from rest_framework import serializers
+from location.models import UserLocation
+
+
 from io import TextIOWrapper
+
+
+class UserLocationSerializer(serializers.ModelSerializer):
+   class Meta:
+       model = UserLocation
+       fields = "__all__"
+
+
+   def create(self, validated_data):
+       address = validated_data.get("address", "")
+       if address:
+           lat, lon = geocode_address(address)
+           validated_data["latitude"] = lat
+           validated_data["longitude"] = lon
+       return super().create(validated_data)
+
+
+   def update(self, instance, validated_data):
+       address = validated_data.get("address", instance.address)
+       if address and address != instance.address:
+           lat, lon = geocode_address(address)
+           validated_data["latitude"] = lat
+           validated_data["longitude"] = lon
+       return super().update(instance, validated_data)
+class ForgotPasswordSerializer(serializers.Serializer):
+   email = serializers.EmailField()
+
+
+
+
+class VerifyCodeSerializer(serializers.Serializer):
+   email = serializers.EmailField()
+   otp = serializers.CharField(max_length=4)
+
+
+
+
+class ResetPasswordSerializer(serializers.Serializer):
+   email = serializers.EmailField()
+   password = serializers.CharField(write_only=True)
+   confirm_password = serializers.CharField(write_only=True)
+
+
+   def validate(self, attrs):
+       if attrs['password'] != attrs['confirm_password']:
+           raise serializers.ValidationError("Password does not match.")
+       return attrs
+
+
 from django.core.mail import send_mail
 from django.conf import settings
 from django.contrib.auth import authenticate

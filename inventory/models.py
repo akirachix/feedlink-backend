@@ -39,6 +39,12 @@ class Listing(models.Model):
         choices=UNIT_CHOICES,
         help_text="Select the unit: kg (weight), L (volume), or unit (count of items)"
     )
+    pickup_point = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        help_text="Specify the location where the item can be picked up"
+    )
     def __str__(self):
         return f"{self.quantity} {self.unit} of {self.product_type}"   
 
